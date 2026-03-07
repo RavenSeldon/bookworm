@@ -1,0 +1,86 @@
+{% comment %}
+Issue Report Form Partial - For reporting problems with library listings
+{% endcomment %}
+
+<div class="report-form fade-in">
+    <button type="button"
+            class="btn btn-link p-0 mb-3"
+            hx-get="{{ library.get_absolute_url }}"
+            hx-target="#library-detail-content"
+            hx-swap="innerHTML">
+        <i class="bi bi-arrow-left me-1"></i>
+        Back to {{ library.name|default:"Library"|truncatechars:20 }}
+    </button>
+
+    <h5 class="mb-2" style="font-family: var(--font-display);">
+        <i class="bi bi-flag me-2 text-primary"></i>
+        Report an Issue
+    </h5>
+
+    <p class="text-muted mb-4">
+        Help us keep our data accurate by reporting any problems with this listing.
+    </p>
+
+    <form method="post"
+          action="{% url 'libraries:report_issue' library.pk %}"
+          hx-post="{% url 'libraries:report_issue' library.pk %}"
+          hx-target="#library-detail-content"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+
+        <!-- Issue Type -->
+        <div class="mb-4">
+            <label for="id_issue_type" class="form-label">
+                What's the issue? <span class="text-danger">*</span>
+            </label>
+            <select name="issue_type"
+                    id="id_issue_type"
+                    class="form-select {% if form.issue_type.errors %}is-invalid{% endif %}"
+                    required>
+                <option value="">Select an issue type...</option>
+                <option value="wrong_location">Wrong Location</option>
+                <option value="does_not_exist">Doesn't Exist Anymore</option>
+                <option value="damaged">Damaged</option>
+                <option value="other">Other</option>
+            </select>
+            {% if form.issue_type.errors %}
+            <div class="invalid-feedback">{{ form.issue_type.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Description -->
+        <div class="mb-4">
+            <label for="id_description" class="form-label">
+                Additional Details
+            </label>
+            <textarea name="description"
+                      id="id_description"
+                      rows="3"
+                      class="form-control"
+                      placeholder="Please provide any additional information that might help us resolve this issue...">{{ form.description.value|default:'' }}</textarea>
+        </div>
+
+        <!-- Honeypot field -->
+        <div class="hp-field" aria-hidden="true">
+            {{ form.website_url }}
+        </div>
+
+        <!-- Submit -->
+        <div class="d-grid gap-2 mt-4">
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-flag me-2"></i>
+                Submit Report
+            </button>
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    hx-get="{{ library.get_absolute_url }}"
+                    hx-target="#library-detail-content"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+            <p class="text-center text-muted small mb-0 mt-2">
+                Reports are reviewed by our team
+            </p>
+        </div>
+    </form>
+</div>

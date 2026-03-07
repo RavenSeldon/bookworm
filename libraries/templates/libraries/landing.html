@@ -1,0 +1,520 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Discover Little Free Libraries near you. Share books with your community using Bookworm's interactive map.">
+    <meta name="theme-color" content="#1a5f4a">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Bookworm: Little Library Finder">
+    <meta property="og:description" content="Discover Little Free Libraries near you. Share books with your community.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
+    <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}/">
+
+    <title>{{ page_title }}</title>
+
+    <!-- Preload hero background -->
+    <link rel="preload" as="image" href="{% static 'libraries/images/bookworm-hero.webp' %}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <!-- Bookworm Shared Design System -->
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+
+    <style>
+
+        /* =================================================================
+           LANDING PAGE STYLES
+           Only styles unique to the landing page live here.
+           Shared styles are in bookworm.css.
+           ================================================================= */
+
+        /* =================================================================
+           HERO — full-width background image with text overlay
+           ================================================================= */
+        .hero {
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background image */
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url("{% static 'libraries/images/bookworm-hero.webp' %}") !important;
+            background-size: cover;
+            background-position: center 30%;
+            background-repeat: no-repeat;
+            z-index: 0;
+        }
+
+        /* Dark gradient overlay for text readability */
+        .hero-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to top,
+                rgba(13, 48, 40, 0.92) 0%,
+                rgba(13, 48, 40, 0.75) 35%,
+                rgba(13, 48, 40, 0.30) 65%,
+                rgba(13, 48, 40, 0.15) 100%
+            );
+        }
+
+        /* Text panel — sits at the bottom of the hero */
+        .hero-text-panel {
+            position: relative;
+            z-index: 1;
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 2rem 1.5rem 2rem;
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: var(--color-primary-200);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-bottom: 1.25rem;
+            width: fit-content;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 7vw, 3.25rem);
+            font-weight: 700;
+            color: white;
+            margin: 0 0 0.75rem 0;
+            line-height: 1.12;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-tagline {
+            font-size: clamp(1rem, 3.5vw, 1.15rem);
+            color: rgba(255, 255, 255, 0.85);
+            margin: 0 0 2rem 0;
+            line-height: 1.6;
+            max-width: 440px;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            color: white;
+            font-family: var(--font-body);
+            font-size: 1.0625rem;
+            font-weight: 600;
+            padding: 0.9rem 1.75rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            box-shadow: 0 4px 20px rgba(42, 157, 122, 0.35);
+            transition: all 0.25s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .cta-button:hover {
+            background: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-500) 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(42, 157, 122, 0.45), 0 0 0 4px rgba(42, 157, 122, 0.15);
+        }
+
+        .cta-button i { font-size: 1.125rem; }
+
+        /* =================================================================
+           STATS STRIP
+           ================================================================= */
+        .stats-section {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 1.25rem 1rem;
+            padding-bottom: 2rem;
+        }
+
+        .stats-section::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2rem;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(255, 255, 255, 0.3) 30%,
+                rgba(255, 255, 255, 0.7) 60%,
+                white 100%
+            );
+            pointer-events: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .stat-item { text-align: center; }
+
+        .stat-number {
+            font-family: var(--font-display);
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* =================================================================
+           HOW IT WORKS
+           ================================================================= */
+        .how-section {
+            padding: 4rem 1.5rem;
+            background: white;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--color-neutral-900);
+            text-align: center;
+            margin: 0 0 2.5rem 0;
+        }
+
+        .steps-grid {
+            display: grid;
+            gap: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .step-card {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .step-icon {
+            width: 52px;
+            height: 52px;
+            min-width: 52px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .step-icon-primary {
+            background: var(--color-primary-100);
+            color: var(--color-primary-700);
+        }
+
+        .step-icon-accent {
+            background: var(--color-accent-100);
+            color: var(--color-accent-600);
+        }
+
+        .step-content h3 {
+            font-family: var(--font-display);
+            font-size: 1.075rem;
+            font-weight: 600;
+            color: var(--color-neutral-900);
+            margin: 0 0 0.25rem 0;
+        }
+
+        .step-content p {
+            font-size: 0.925rem;
+            color: var(--color-neutral-600);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* =================================================================
+           SECONDARY CTA
+           ================================================================= */
+        .secondary-cta {
+            padding: 3rem 1.5rem;
+            background: var(--color-neutral-100);
+            text-align: center;
+        }
+
+        .secondary-cta-illustration {
+            height: 120px;
+            width: auto;
+            opacity: 0.7;
+        }
+
+        .secondary-cta-stat {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: var(--color-primary-700);
+            margin: 0 0 0.25rem 0 !important;
+        }
+
+        .secondary-cta p {
+            color: var(--color-neutral-600);
+            margin: 0 0 1rem 0;
+            font-size: 1rem;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            color: var(--color-primary-700);
+            font-weight: 600;
+            padding: 0.875rem 1.5rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            border: 2px solid var(--color-primary-600);
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-primary-700);
+            border-color: var(--color-primary-700);
+            color: white;
+        }
+
+        /* =================================================================
+           FOOTER
+           ================================================================= */
+        .landing-footer {
+            padding: 2rem 1.5rem;
+            text-align: center;
+            background: white;
+            border-top: 1px solid var(--color-neutral-200);
+        }
+
+        .landing-footer p {
+            color: var(--color-neutral-500);
+            font-size: 0.875rem;
+            margin: 0.4rem 0;
+        }
+
+        .landing-footer a {
+            color: var(--color-primary-700);
+            text-decoration: none;
+        }
+
+        .landing-footer a:hover { text-decoration: underline; }
+
+        /* =================================================================
+           DESKTOP — side-by-side hero
+           ================================================================= */
+        @media (min-width: 768px) {
+            .hero-text-panel {
+                padding: 3rem 3rem 2.5rem;
+            }
+
+            .hero-bg {
+                background-position: center;
+            }
+
+            .stats-grid {
+                max-width: 500px;
+            }
+
+            .stats-section {
+                padding: 1.25rem 1rem;
+                padding-bottom: 2rem;
+            }
+
+            .stats-section::after {
+                height: 2rem;
+            }
+
+            .stat-number { font-size: 2.25rem; }
+
+            .cta-button {
+                width: auto;
+            }
+
+            .how-section { padding: 4rem 1rem; }
+
+            .steps-grid {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 800px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .hero-text-panel {
+                padding: 4rem 4rem 3rem;
+            }
+
+            .hero-title {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#how-it-works" class="visually-hidden-focusable">Skip to content</a>
+
+    <!-- Hero Section -->
+    <section class="hero">
+
+        <!-- Background image -->
+        <div class="hero-bg" role="img" aria-label="Bookworm mascot reading a book beside a Little Free Library, with British Columbia mountains and forest in the background"></div>
+
+        <!-- Text panel -->
+        <div class="hero-text-panel">
+            <span class="hero-eyebrow">
+                <i class="bi bi-geo-alt-fill"></i>
+                British Columbia
+            </span>
+            <h1 class="hero-title">Find a Little<br>Free Library<br>near you.</h1>
+            <p class="hero-tagline">
+                Discover Little Free Libraries in your neighbourhood.
+                Take a book, leave a book, share the joy of reading.
+            </p>
+            <div>
+                <a href="{% url 'libraries:map' %}" class="cta-button">
+                    <i class="bi bi-map"></i>
+                    Explore the Map
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats strip (only shown if there are libraries) -->
+        {% if library_count > 0 %}
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">{{ library_count }}</div>
+                    <div class="stat-label">Libraries</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ shelfie_count }}</div>
+                    <div class="stat-label">Photos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ recent_activity }}</div>
+                    <div class="stat-label">Active This Week</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-section" id="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-icon step-icon-primary"><i class="bi bi-geo-alt"></i></div>
+                <div class="step-content">
+                    <h3>Find Libraries Near You</h3>
+                    <p>Browse the interactive map to discover Little Free Libraries in your area.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-icon step-icon-accent"><i class="bi bi-camera"></i></div>
+                <div class="step-content">
+                    <h3>Check What's Inside</h3>
+                    <p>See recent photos showing current book selections before you visit.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-icon step-icon-primary"><i class="bi bi-plus-circle"></i></div>
+                <div class="step-content">
+                    <h3>Add New Libraries</h3>
+                    <p>Found one that's not on our map? Add it in seconds from your phone.</p>
+                </div>
+            </div>
+            <div class="step-card">
+                <div class="step-icon step-icon-accent"><i class="bi bi-share"></i></div>
+                <div class="step-content">
+                    <h3>Share the Love</h3>
+                    <p>Snap a shelfie to help others discover great books in your community.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Secondary CTA -->
+    <section class="secondary-cta">
+        <img src="{% static 'libraries/images/bookworm-landing-logo.png' %}"
+             alt=""
+             class="secondary-cta-illustration"
+             aria-hidden="true">
+        <p class="secondary-cta-stat">{{ library_count }} libraries mapped and counting</p>
+        <p>Know of a Little Free Library not on our map?</p>
+        <a href="{% url 'libraries:map' %}" class="btn-secondary">
+            <i class="bi bi-plus-lg"></i>
+            Add a Library
+        </a>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <p>
+           Bookworm: Built with <i class="bi bi-hearts" style="color: var(--color-primary-500);"></i> for book lovers everywhere
+        </p>
+        <p>
+            <a href="https://littlefreelibrary.org" target="_blank" rel="noopener">
+                Learn about Little Free Library&reg;
+            </a>
+        </p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+{# Shelfie Upload Form Partial #}
+
+<div class="shelfie-form fade-in">
+    <button type="button"
+            class="btn btn-link p-0 mb-3"
+            hx-get="{{ library.get_absolute_url }}"
+            hx-target="#library-detail-content"
+            hx-swap="innerHTML">
+        <i class="bi bi-arrow-left me-1"></i>
+        Back to {{ library.name|default:"Library"|truncatechars:20 }}
+    </button>
+
+    <form method="post"
+          action="{% url 'libraries:upload_shelfie' library_pk=library.pk %}"
+          enctype="multipart/form-data"
+          hx-post="{% url 'libraries:upload_shelfie' library_pk=library.pk %}"
+          hx-target="#library-detail-content"
+          hx-swap="innerHTML"
+          id="shelfie-upload-form">
+        {% csrf_token %}
+
+        {# Honeypot #}
+        <input type="text" name="website_url" class="hp-field" tabindex="-1" autocomplete="off">
+
+        {# Anti-bot timing #}
+        <input type="hidden" name="_form_loaded_at" value="{{ form_loaded_at }}">
+
+        {# Library Context Card #}
+        <div class="card bg-light mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="
+                        width: 48px;
+                        height: 48px;
+                        background: var(--color-primary-100);
+                        border-radius: var(--radius-md);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <i class="bi bi-book-half text-primary" style="font-size: 1.25rem;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">{{ library.name|default:"Library" }}</h6>
+                        <span class="text-muted" style="font-size: 0.8125rem;">
+                            Adding a new shelfie
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Photo Upload #}
+        <div class="mb-4">
+            <label class="form-label d-flex align-items-center gap-2" for="id_shelfie_photo">
+                <i class="bi bi-camera text-primary"></i>
+                <span>Take a Shelfie <span class="text-danger">*</span></span>
+            </label>
+            <input type="file"
+                   name="photo"
+                   id="id_shelfie_photo"
+                   accept="image/*"
+                   capture="environment"
+                   class="form-control {% if form.photo.errors %}is-invalid{% endif %}"
+                   required>
+            <small class="form-text">
+                Show others what books are currently available (max {{ max_upload_size_mb }}MB)
+            </small>
+            {% if form.photo.errors %}
+            <div class="invalid-feedback">{{ form.photo.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        {# Book Highlights #}
+        <div class="mb-4">
+            <label class="form-label" for="id_shelfie_highlights">
+                What Books Do You See? <span class="text-muted fw-normal">(optional)</span>
+            </label>
+            <textarea name="book_highlights"
+                      id="id_shelfie_highlights"
+                      class="form-control"
+                      rows="3"
+                      placeholder="e.g., Great selection of kids books today! Spotted a Harry Potter and some Dr. Seuss.">{{ form.book_highlights.value|default:'' }}</textarea>
+            <small class="form-text">Help others know what to expect</small>
+        </div>
+
+        {# Errors #}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger" role="alert">
+            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+
+        {# Submit #}
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-upload me-2"></i>Upload Shelfie
+            </button>
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    hx-get="{{ library.get_absolute_url }}"
+                    hx-target="#library-detail-content"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

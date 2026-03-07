@@ -1,0 +1,1461 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Discover Little Free Libraries near you. View what's on the shelves and share updates!">
+    <meta name="theme-color" content="#1a5f4a">
+    <title>{{ page_title }}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
+
+    <!-- Bookworm Shared Design System -->
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <style>
+        /* =================================================================
+           MAP-SPECIFIC STYLES
+           Only styles unique to the map page live here.
+           Shared styles are in bookworm.css.
+           ================================================================= */
+
+        /* =================================================================
+           ADD LIBRARY BUTTON (Navbar)
+           ================================================================= */
+        .btn-add-library {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            border: none;
+            font-size: 0.875rem;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-add-library:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* =================================================================
+           MAP CONTAINER
+           ================================================================= */
+        #map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            background: var(--color-primary-100);
+        }
+
+        /* Custom Leaflet Styles */
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: var(--shadow-lg) !important;
+            border-radius: var(--radius-md) !important;
+            overflow: hidden;
+        }
+
+        .leaflet-control-zoom a {
+            background: white !important;
+            color: var(--color-neutral-700) !important;
+            width: 36px !important;
+            height: 36px !important;
+            line-height: 36px !important;
+            font-size: 16px !important;
+            border-bottom: 1px solid var(--color-neutral-200) !important;
+            transition: all var(--transition-fast);
+        }
+
+        .leaflet-control-zoom a:last-child {
+            border-bottom: none !important;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background: var(--color-neutral-100) !important;
+            color: var(--color-primary-700) !important;
+        }
+
+        /* =================================================================
+           MAP CONTROLS
+           ================================================================= */
+        .map-controls {
+            position: absolute;
+            bottom: 32px;
+            right: 16px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .map-control-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+            font-size: 1.25rem;
+            border: none;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-control-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .map-control-btn.btn-primary {
+            background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+            color: white;
+        }
+
+        .map-control-btn.btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl), 0 0 0 4px rgba(42, 157, 122, 0.2);
+        }
+
+        .map-control-btn.btn-light {
+            background: white;
+            color: var(--color-neutral-700);
+        }
+
+        .map-control-btn.btn-light:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            color: var(--color-primary-700);
+        }
+
+        .map-control-btn.loading {
+            pointer-events: none;
+        }
+
+        .map-control-btn.loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* =================================================================
+           MAP LEGEND
+           ================================================================= */
+        .map-legend {
+            position: absolute;
+            bottom: 32px;
+            left: 16px;
+            z-index: 1000;
+            background: white;
+            padding: 16px 20px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            font-size: 0.8125rem;
+            border: 1px solid var(--color-neutral-200);
+        }
+
+        .map-legend-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-neutral-500);
+            margin-bottom: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 0;
+            color: var(--color-neutral-700);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: var(--radius-full);
+            flex-shrink: 0;
+        }
+
+        /* =================================================================
+           CUSTOM MAP MARKERS
+           ================================================================= */
+        .custom-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-pin {
+            width: 40px;
+            height: 40px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+            border: 3px solid white;
+            transition: transform var(--transition-fast);
+        }
+
+        .marker-pin:hover {
+            transform: rotate(-45deg) scale(1.1);
+        }
+
+        .marker-pin i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 16px;
+        }
+
+        /* Marker Clusters */
+        .marker-cluster-small,
+        .marker-cluster-medium,
+        .marker-cluster-large {
+            background: rgba(42, 157, 122, 0.2) !important;
+        }
+
+        .marker-cluster-small div,
+        .marker-cluster-medium div,
+        .marker-cluster-large div {
+            background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%) !important;
+            color: white !important;
+            font-family: var(--font-body) !important;
+            font-weight: 600 !important;
+        }
+
+        /* =================================================================
+           LEAFLET POPUP STYLES
+           ================================================================= */
+        .leaflet-popup-content-wrapper {
+            padding: 0;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--color-neutral-200);
+        }
+
+        .leaflet-popup-content {
+            margin: 0;
+            min-width: 260px;
+            max-width: 300px;
+        }
+
+        .leaflet-popup-tip {
+            background: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .popup-content {
+            background: white;
+        }
+
+        .popup-image-container {
+            position: relative;
+            width: 100%;
+            height: 140px;
+            overflow: hidden;
+            background: var(--color-neutral-100);
+        }
+
+        .popup-image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .popup-image-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-neutral-400);
+            background: linear-gradient(135deg, var(--color-neutral-100) 0%, var(--color-neutral-200) 100%);
+        }
+
+        .popup-image-placeholder i {
+            font-size: 2rem;
+            margin-bottom: 4px;
+        }
+
+        .popup-body {
+            padding: 16px;
+        }
+
+        .popup-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-neutral-900);
+            margin: 0 0 8px 0;
+            line-height: 1.3;
+        }
+
+        .popup-description {
+            font-size: 0.8125rem;
+            color: var(--color-neutral-600);
+            margin: 0 0 12px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .popup-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--color-neutral-500);
+            margin-bottom: 12px;
+        }
+
+        .popup-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .popup-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .popup-actions .btn {
+            flex: 1;
+            font-size: 0.8125rem;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            transition: all var(--transition-fast);
+        }
+
+        .popup-actions .btn-primary {
+            background: var(--color-primary-700);
+            border-color: var(--color-primary-700);
+        }
+
+        .popup-actions .btn-primary:hover {
+            background: var(--color-primary-800);
+            border-color: var(--color-primary-800);
+        }
+
+        /* =================================================================
+           OFFCANVAS STYLES
+           ================================================================= */
+        .offcanvas {
+            font-family: var(--font-body);
+        }
+
+        .offcanvas-header {
+            background: var(--color-neutral-50);
+            border-bottom: 1px solid var(--color-neutral-200);
+            padding: 20px 24px;
+        }
+
+        .offcanvas-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.25rem;
+            color: var(--color-neutral-900);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .offcanvas-title i {
+            color: var(--color-primary-600);
+        }
+
+        .offcanvas-body {
+            padding: 24px;
+            background: white;
+        }
+
+        .offcanvas-bottom {
+            height: auto;
+            max-height: 85vh;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            border-top: 1px solid var(--color-neutral-200);
+        }
+
+        .offcanvas-end {
+            width: 100%;
+            max-width: 420px;
+            border-left: 1px solid var(--color-neutral-200);
+        }
+
+        #libraryOffcanvas {
+            height: 85vh;
+            max-height: 85vh;
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        }
+
+        #libraryOffcanvas .offcanvas-body {
+            overflow-y: auto;
+        }
+
+        .offcanvas-end {
+            width: 100%;
+            max-width: 450px;
+        }
+
+        @media (max-width: 576px) {
+            #libraryOffcanvas {
+                height: 90vh;
+                max-height: 90vh;
+            }
+
+            .offcanvas-end {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        /* =================================================================
+           LOCATION PICKER
+           ================================================================= */
+        #location-picker-map {
+            height: 200px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 2px solid var(--color-neutral-200);
+            overflow: hidden;
+        }
+
+        #location-display {
+            font-size: 0.8125rem;
+            padding: 8px 12px;
+            background: var(--color-fresh-bg);
+            color: #15803d;
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+        }
+
+        /* =================================================================
+           MAP-SPECIFIC RESPONSIVE ADJUSTMENTS
+           ================================================================= */
+        @media (max-width: 768px) {
+            .btn-add-library span {
+                display: none;
+            }
+
+            .btn-add-library {
+                padding: 8px 12px;
+            }
+
+            .map-legend {
+                bottom: 100px;
+                left: 12px;
+                padding: 12px 16px;
+                font-size: 0.75rem;
+            }
+
+            .map-controls {
+                bottom: 100px;
+                right: 12px;
+            }
+
+            .map-control-btn {
+                width: 48px;
+                height: 48px;
+            }
+
+            .offcanvas-body {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .map-legend {
+                display: none;
+            }
+
+            .leaflet-popup-content {
+                min-width: 240px;
+                max-width: 280px;
+            }
+        }
+
+        /* =================================================================
+           EMPTY STATE OVERLAY
+           ================================================================= */
+        .map-empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 800;
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            padding: 32px 28px;
+            text-align: center;
+            max-width: 320px;
+            width: calc(100% - 32px);
+            border: 1px solid var(--color-neutral-200);
+            animation: fadeSlideUp 0.3s ease-out;
+        }
+
+        .map-empty-state.hidden {
+            display: none;
+        }
+
+        .map-empty-state-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--color-primary-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .map-empty-state-icon i {
+            font-size: 1.75rem;
+            color: var(--color-primary-600);
+        }
+
+        .map-empty-state h5 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--color-neutral-900);
+        }
+
+        .map-empty-state p {
+            font-size: 0.875rem;
+            color: var(--color-neutral-600);
+            margin-bottom: 20px;
+        }
+
+        .map-empty-state .btn {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* =================================================================
+           ERROR BANNER
+           ================================================================= */
+        .map-error-banner {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1100;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: var(--radius-lg);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-lg);
+            max-width: calc(100% - 32px);
+            font-size: 0.875rem;
+            color: #991b1b;
+            animation: fadeSlideDown 0.3s ease-out;
+        }
+
+        .map-error-banner.hidden {
+            display: none;
+        }
+
+        .map-error-banner i {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .map-error-banner .btn {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .map-error-banner .btn-close {
+            font-size: 0.625rem;
+            flex-shrink: 0;
+        }
+
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translate(-50%, -12px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        /* =================================================================
+           LOCATION CONFIRMATION
+           ================================================================= */
+        .location-confirm-card {
+            background: var(--color-primary-50, #f0fdf9);
+            border: 1.5px solid var(--color-primary-300, #6ee7b7);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            animation: confirmReveal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .location-confirm-card .confirm-address {
+            font-size: 0.8125rem;
+            color: var(--color-neutral-700);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .location-confirm-card .confirm-address i {
+            color: var(--color-primary-600);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .location-confirm-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .location-confirm-actions .btn {
+            font-size: 0.8125rem;
+            padding: 6px 14px;
+            font-weight: 500;
+        }
+
+        @keyframes confirmReveal {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-3 px-md-4">
+            <a class="navbar-brand" href="{% url 'libraries:landing' %}">
+                <img src="{% static 'libraries/images/bookworm-nav-logo.png' %}"
+                     alt="Bookworm mascot"
+                     height="36">
+                <span>Bookworm</span>
+            </a>
+            <button class="btn-add-library"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#submitOffcanvas"
+                    aria-label="Add a library">
+                <i class="bi bi-plus"></i>
+                <span>Add Library</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Map Container -->
+    <div id="map-container">
+        <div id="map"></div>
+
+        <!-- Map Controls -->
+        <div class="map-controls">
+            <button class="btn map-control-btn btn-primary"
+                    id="btn-locate"
+                    title="Find my location"
+                    aria-label="Find my location">
+                <i class="bi bi-crosshairs"></i>
+            </button>
+            <button class="btn map-control-btn btn-light"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#submitOffcanvas"
+                    title="Add a library"
+                    aria-label="Add a library">
+                <i class="bi bi-plus"></i>
+            </button>
+        </div>
+
+        <!-- Legend -->
+        <div class="map-legend">
+            <div class="map-legend-title">Library Freshness</div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-fresh);"></span>
+                <span>Fresh — under 7 days</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-stale);"></span>
+                <span>Stale — 7 to 21 days</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot" style="background: var(--color-needs-visit);"></span>
+                <span>Needs visit — over 21 days</span>
+            </div>
+        </div>
+
+        <!-- Empty State Overlay -->
+        <div class="map-empty-state hidden" id="map-empty-state">
+            <div class="map-empty-state-icon">
+                <i class="bi bi-search"></i>
+            </div>
+            <h5>No Libraries Here Yet</h5>
+            <p>There aren't any Little Free Libraries in this area. Try exploring somewhere else or add the first one!</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="map.zoomOut(3)">
+                    <i class="bi bi-arrows-angle-expand me-1"></i>Zoom Out
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="getUserLocation()">
+                    <i class="bi bi-crosshairs me-1"></i>Use My Location
+                </button>
+                <button class="btn btn-primary btn-sm"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#submitOffcanvas">
+                    <i class="bi bi-plus-lg me-1"></i>Add the First Library
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Banner -->
+        <div class="map-error-banner hidden" id="map-error-banner">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span id="map-error-message">Unable to load libraries.</span>
+            <button class="btn btn-outline-danger btn-sm" id="map-error-retry" onclick="loadLibraries()">Retry</button>
+            <button type="button" class="btn-close" onclick="hideErrorBanner()" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <!-- Library Detail Offcanvas -->
+    <div class="offcanvas offcanvas-bottom" tabindex="-1" id="libraryOffcanvas" aria-labelledby="libraryOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="libraryOffcanvasLabel">
+                <i class="bi bi-book"></i>
+                Library Details
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="library-detail-content">
+            <div class="loading-container">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading library details...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Library Offcanvas -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="submitOffcanvas" aria-labelledby="submitOffcanvasLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="submitOffcanvasLabel">
+                <i class="bi bi-plus-circle"></i>
+                Add a Little Library
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div id="submit-form-container">
+                <div class="loading-container">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading form...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-message">
+                    Success!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <!-- Bookworm Shared JS (lightbox, reporting, toast, keyboard/swipe) -->
+    <script src="{% static 'libraries/js/library-detail.js' %}"></script>
+
+    <script>
+        // =================================================================
+        // Configuration
+        // =================================================================
+        const CONFIG = {
+            defaultLat: {{ default_lat }},
+            defaultLng: {{ default_lng }},
+            defaultZoom: {{ default_zoom }},
+            geojsonUrl: "{% url 'libraries:libraries_geojson' %}",
+            maxUploadSizeMB: {{ max_upload_size_mb|default:10 }},
+            geocodeUrl: "{% url 'libraries:geocode' %}",
+            colors: {
+                fresh: '#22c55e',
+                stale: '#f59e0b',
+                needs_visit: '#78716c'
+            }
+        };
+
+        // =================================================================
+        // SEO URL Builder
+        // =================================================================
+        const librarySlugMap = {};
+
+        function libraryUrl(pk) {
+            const slug = librarySlugMap[pk];
+            if (slug) {
+                return `/library/${pk}-${slug}/`;
+            }
+            return `/library/${pk}/`;
+        }
+
+        // =================================================================
+        // Map Initialization
+        // =================================================================
+        const map = L.map('map', {
+            zoomControl: false
+        }).setView([CONFIG.defaultLat, CONFIG.defaultLng], CONFIG.defaultZoom);
+
+        // Add zoom control to top-right
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Add tile layer (CartoDB Voyager - cleaner look)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // =================================================================
+        // Marker Cluster Group
+        // =================================================================
+        const markers = L.markerClusterGroup({
+            showCoverageOnHover: false,
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 17,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                let size = 'small';
+                if (count > 10) size = 'medium';
+                if (count > 25) size = 'large';
+
+                return L.divIcon({
+                    html: `<div><span>${count}</span></div>`,
+                    className: `marker-cluster marker-cluster-${size}`,
+                    iconSize: L.point(40, 40)
+                });
+            }
+        });
+        map.addLayer(markers);
+
+        // =================================================================
+        // Custom Marker Icon Factory
+        // =================================================================
+        function createMarkerIcon(color) {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="marker-pin" style="background: ${color};">
+                         <i class="bi bi-book-half"></i>
+                       </div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 40],
+                popupAnchor: [0, -40]
+            });
+        }
+
+        // =================================================================
+        // Load Libraries from GeoJSON
+        // =================================================================
+        let retryTimeout = null;
+
+        async function loadLibraries() {
+            try {
+                // Get current map bounds with a small buffer (10%)
+                const bounds = map.getBounds();
+                const buffer = 0.1;
+                const sw = bounds.getSouthWest();
+                const ne = bounds.getNorthEast();
+
+                const latBuffer = (ne.lat - sw.lat) * buffer;
+                const lngBuffer = (ne.lng - sw.lng) * buffer;
+
+                const bbox = [
+                    sw.lng - lngBuffer,  // west
+                    sw.lat - latBuffer,  // south
+                    ne.lng + lngBuffer,  // east
+                    ne.lat + latBuffer   // north
+                ].join(',');
+
+                // Build URL with BBOX parameter
+                const url = `${CONFIG.geojsonUrl}?bbox=${bbox}`;
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`Server error (${response.status})`);
+                }
+
+                const data = await response.json();
+
+                // Clear any error state on success
+                hideErrorBanner();
+                if (retryTimeout) {
+                    clearTimeout(retryTimeout);
+                    retryTimeout = null;
+                }
+
+                markers.clearLayers();
+
+                data.features.forEach(feature => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+
+                    // Cache slug for SEO URL building
+                    if (props.slug) {
+                        librarySlugMap[props.id] = props.slug;
+                    }
+
+                    const marker = L.marker([coords[1], coords[0]], {
+                        icon: createMarkerIcon(props.color)
+                    });
+
+                    // Build popup content
+                    const popupContent = createPopupContent(props);
+                    marker.bindPopup(popupContent, {
+                        maxWidth: 300,
+                        minWidth: 260,
+                        className: 'custom-popup'
+                    });
+
+                    marker.libraryId = props.id;
+                    markers.addLayer(marker);
+                });
+
+                // Show/hide empty state
+                const emptyState = document.getElementById('map-empty-state');
+                if (data.features.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                }
+
+            } catch (error) {
+                console.error('Failed to load libraries:', error);
+
+                // Determine message
+                const isOffline = !navigator.onLine;
+                const message = isOffline
+                    ? 'You appear to be offline. Libraries will load when you reconnect.'
+                    : 'Unable to load libraries. Please try again.';
+
+                showErrorBanner(message);
+
+                // Auto-retry once after 5 seconds
+                if (!retryTimeout) {
+                    retryTimeout = setTimeout(() => {
+                        retryTimeout = null;
+                        loadLibraries();
+                    }, 5000);
+                }
+            }
+        }
+
+        function showErrorBanner(message) {
+            const banner = document.getElementById('map-error-banner');
+            document.getElementById('map-error-message').textContent = message;
+            banner.classList.remove('hidden');
+        }
+
+        function hideErrorBanner() {
+            document.getElementById('map-error-banner').classList.add('hidden');
+        }
+
+        // =================================================================
+        // Create Popup Content
+        // =================================================================
+        function createPopupContent(props) {
+            const freshnessLabels = {
+                'fresh': 'Fresh',
+                'stale': 'Stale',
+                'needs_visit': 'Needs Visit'
+            };
+
+            const freshnessClass = props.freshness.replace('_', '');
+
+            let imageHtml = `
+                <div class="popup-image-placeholder">
+                    <i class="bi bi-book"></i>
+                    <small style="font-style: italic;">Be the first to add a shelfie!</small>
+                </div>
+            `;
+
+            if (props.latest_shelfie && props.latest_shelfie.photo_url) {
+                imageHtml = `<img src="${props.latest_shelfie.photo_url}" alt="Latest shelfie">`;
+            }
+
+            let descriptionHtml = '';
+            if (props.description) {
+                descriptionHtml = `<p class="popup-description">${escapeHtml(props.description)}</p>`;
+            }
+
+            return `
+                <div class="popup-content">
+                    <div class="popup-image-container">
+                        ${imageHtml}
+                    </div>
+                    <div class="popup-body">
+                        <h6 class="popup-title">${escapeHtml(props.name)}</h6>
+                        ${descriptionHtml}
+                        <div class="popup-meta">
+                            <span class="freshness-badge freshness-${freshnessClass}">
+                                <i class="bi bi-clock"></i>
+                                ${freshnessLabels[props.freshness] || 'Unknown'}
+                            </span>
+                            <span class="popup-meta-item">
+                                <i class="bi bi-camera"></i>
+                                ${props.shelfie_count} shelfie${props.shelfie_count !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <div class="popup-actions">
+                            <button class="btn btn-primary btn-sm" onclick="openShelfieForm(${props.id}); return false;">
+                                <i class="bi bi-camera"></i>
+                                Add Shelfie
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="openLibraryDetail(${props.id}); return false;">
+                                <i class="bi bi-info-circle"></i>
+                                Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =================================================================
+        // Library Detail Functions
+        // =================================================================
+        function loadLibraryDetail(libraryId) {
+            const detailContent = document.getElementById('library-detail-content');
+            detailContent.innerHTML = `
+                <div class="loading-container">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading library details...</p>
+                </div>
+            `;
+
+            htmx.ajax('GET', libraryUrl(libraryId), {
+                target: '#library-detail-content',
+                swap: 'innerHTML'
+            });
+        }
+
+        function openLibraryDetail(libraryId) {
+            // Close any open popups
+            map.closePopup();
+
+            loadLibraryDetail(libraryId);
+            const offcanvas = new bootstrap.Offcanvas(document.getElementById('libraryOffcanvas'));
+            offcanvas.show();
+        }
+
+        function openShelfieForm(libraryId) {
+            // Close any open popups
+            map.closePopup();
+
+            const offcanvas = new bootstrap.Offcanvas(document.getElementById('libraryOffcanvas'));
+            offcanvas.show();
+
+            const detailContent = document.getElementById('library-detail-content');
+            detailContent.innerHTML = `
+                <div class="loading-container">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading form...</p>
+                </div>
+            `;
+
+            htmx.ajax('GET', `/library/${libraryId}/shelfie/form/`, {
+                target: '#library-detail-content',
+                swap: 'innerHTML'
+            });
+        }
+
+        function openReportForm(libraryId) {
+            htmx.ajax('GET', `/library/${libraryId}/report/form/`, {
+                target: '#library-detail-content',
+                swap: 'innerHTML'
+            });
+        }
+
+        // =================================================================
+        // Geolocation
+        // =================================================================
+        const locateBtn = document.getElementById('btn-locate');
+        let userLocationMarker = null;
+        let userLocationCircle = null;
+
+        locateBtn.addEventListener('click', getUserLocation);
+
+        function getUserLocation() {
+            if (!navigator.geolocation) {
+                showToast('Geolocation is not supported by your browser', 'warning');
+                return;
+            }
+
+            locateBtn.classList.add('loading');
+            locateBtn.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+
+                    map.setView([latitude, longitude], 15);
+
+                    if (userLocationMarker) {
+                        userLocationMarker.setLatLng([latitude, longitude]);
+                        userLocationCircle.setLatLng([latitude, longitude]);
+                    } else {
+                        userLocationMarker = L.circleMarker([latitude, longitude], {
+                            radius: 8,
+                            fillColor: '#2a9d7a',
+                            fillOpacity: 1,
+                            color: '#fff',
+                            weight: 3
+                        }).addTo(map);
+
+                        userLocationCircle = L.circle([latitude, longitude], {
+                            radius: 50,
+                            fillColor: '#2a9d7a',
+                            fillOpacity: 0.15,
+                            color: '#2a9d7a',
+                            weight: 2
+                        }).addTo(map);
+                    }
+
+                    locateBtn.classList.remove('loading');
+                    locateBtn.disabled = false;
+                },
+                (error) => {
+                    let message = 'Unable to get your location';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        message = 'Location permission denied. Please enable location access.';
+                    }
+                    showToast(message, 'warning');
+
+                    locateBtn.classList.remove('loading');
+                    locateBtn.disabled = false;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        // =================================================================
+        // Submit Form Location Picker
+        // =================================================================
+        let submitLocationPicker = null;
+        let submitLocationMarker = null;
+
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target.id === 'submit-form-container') {
+                setTimeout(initLocationPicker, 100);
+            }
+        });
+
+        function initLocationPicker() {
+            const pickerContainer = document.getElementById('location-picker-map');
+            if (!pickerContainer) return;
+
+            // Clean up existing picker
+            if (submitLocationPicker) {
+                submitLocationPicker.remove();
+                submitLocationPicker = null;
+                submitLocationMarker = null;
+            }
+
+            const center = map.getCenter();
+
+            submitLocationPicker = L.map('location-picker-map').setView([center.lat, center.lng], 14);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap © CARTO',
+                maxZoom: 19
+            }).addTo(submitLocationPicker);
+
+            submitLocationPicker.on('click', function(e) {
+                if (!submitLocationPicker) return; // Guard against race condition
+                setSubmitLocation(e.latlng.lat, e.latlng.lng);
+            });
+
+            const useLocationBtn = document.getElementById('use-my-location');
+            if (useLocationBtn) {
+                useLocationBtn.addEventListener('click', function() {
+                    if (navigator.geolocation) {
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Getting location...';
+
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                // Guard: Check if picker still exists (user may have closed offcanvas)
+                                if (!submitLocationPicker) {
+                                    console.warn('Location picker destroyed, ignoring geolocation result');
+                                    return;
+                                }
+
+                                setSubmitLocation(position.coords.latitude, position.coords.longitude);
+                                submitLocationPicker.setView([position.coords.latitude, position.coords.longitude], 17);
+                                this.disabled = false;
+                                this.innerHTML = '<i class="bi bi-crosshairs me-2"></i>Use My Location';
+                            },
+                            (error) => {
+                                // Guard: Check if picker still exists
+                                if (!submitLocationPicker) return;
+                                showToast('Could not get your location', 'warning');
+                                this.disabled = false;
+                                this.innerHTML = '<i class="bi bi-crosshairs me-2"></i>Use My Location';
+                            },
+                            { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                submitLocationPicker.invalidateSize();
+            }, 300);
+        }
+
+        let pendingLocation = null;
+
+        function setSubmitLocation(lat, lng) {
+            // Guard against calls after map is destroyed
+            if (!submitLocationPicker) {
+                console.warn('Location picker not initialized, ignoring setSubmitLocation');
+                return;
+            }
+
+            // Place/move marker immediately for visual feedback
+            if (submitLocationMarker) {
+                submitLocationMarker.setLatLng([lat, lng]);
+            } else {
+                submitLocationMarker = L.marker([lat, lng], {
+                    icon: createMarkerIcon(CONFIG.colors.fresh)
+                }).addTo(submitLocationPicker);
+            }
+
+            // Store pending location (not committed until confirmed)
+            pendingLocation = { lat, lng };
+
+            // Clear committed values until confirmed
+            document.getElementById('id_latitude').value = '';
+            document.getElementById('id_longitude').value = '';
+
+            // Show confirmation card
+            const locationDisplay = document.getElementById('location-display');
+            if (locationDisplay) {
+                locationDisplay.innerHTML = `
+                    <div class="location-confirm-card">
+                        <div class="confirm-address">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <span id="confirm-address-text">
+                                ${lat.toFixed(5)}, ${lng.toFixed(5)}
+                            </span>
+                        </div>
+                        <div class="location-confirm-actions">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="confirmLocation()">
+                                <i class="bi bi-check-lg me-1"></i>Confirm
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="adjustLocation()">
+                                Adjust
+                            </button>
+                        </div>
+                    </div>
+                `;
+                locationDisplay.classList.remove('d-none');
+            }
+        }
+
+        function confirmLocation() {
+            if (!pendingLocation) return;
+
+            document.getElementById('id_latitude').value = pendingLocation.lat;
+            document.getElementById('id_longitude').value = pendingLocation.lng;
+
+            const locationDisplay = document.getElementById('location-display');
+            const addressText = document.getElementById('confirm-address-text');
+            const currentAddress = addressText ? addressText.textContent.trim().split('\n')[0] : '';
+            const displayText = currentAddress || `${pendingLocation.lat.toFixed(5)}, ${pendingLocation.lng.toFixed(5)}`;
+
+            if (locationDisplay) {
+                locationDisplay.innerHTML = `<i class="bi bi-check-circle me-1"></i>Location confirmed: ${displayText}`;
+                locationDisplay.classList.remove('d-none');
+            }
+
+            pendingLocation = null;
+        }
+
+        function adjustLocation() {
+            pendingLocation = null;
+
+            // Remove marker so user can re-tap
+            if (submitLocationMarker) {
+                submitLocationPicker.removeLayer(submitLocationMarker);
+                submitLocationMarker = null;
+            }
+
+            // Clear display
+            const locationDisplay = document.getElementById('location-display');
+            if (locationDisplay) {
+                locationDisplay.classList.add('d-none');
+            }
+
+            // Clear hidden fields
+            document.getElementById('id_latitude').value = '';
+            document.getElementById('id_longitude').value = '';
+        }
+
+
+        document.getElementById('submitOffcanvas').addEventListener('hidden.bs.offcanvas', function() {
+            // Destroy Leaflet map instance
+            if (submitLocationPicker) {
+                submitLocationPicker.remove();
+                submitLocationPicker = null;
+                submitLocationMarker = null;
+            }
+            pendingLocation = null;
+
+            // Reset container to loading state for next open
+            const formContainer = document.getElementById('submit-form-container');
+            if (formContainer) {
+                formContainer.innerHTML = `
+                    <div class="loading-container">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Loading form...</p>
+                    </div>
+                `;
+            }
+        });
+
+        // When offcanvas OPENS - fetch fresh form (triggers initLocationPicker via htmx:afterSwap)
+        document.getElementById('submitOffcanvas').addEventListener('show.bs.offcanvas', function() {
+            const formContainer = document.getElementById('submit-form-container');
+            if (formContainer) {
+                htmx.ajax('GET', "{% url 'libraries:submit_form' %}", {
+                    target: '#submit-form-container',
+                    swap: 'innerHTML'
+                });
+            }
+        });
+
+        // =================================================================
+        // HTMX Event Handlers (Map-specific: refresh markers + close offcanvas)
+        // =================================================================
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            const successEl = event.detail.target.querySelector('.submission-success');
+            if (successEl) {
+                showToast(successEl.dataset.message || 'Success!', 'success');
+
+                setTimeout(loadLibraries, 500);
+
+                setTimeout(() => {
+                    const offcanvasElements = document.querySelectorAll('.offcanvas.show');
+                    offcanvasElements.forEach(el => {
+                        const offcanvas = bootstrap.Offcanvas.getInstance(el);
+                        if (offcanvas) offcanvas.hide();
+                    });
+                }, 20000);
+            }
+        });
+
+        // =================================================================
+        // Debounced Map Refresh
+        // =================================================================
+        let mapRefreshTimeout = null;
+
+        function debouncedLoadLibraries() {
+            if (mapRefreshTimeout) {
+                clearTimeout(mapRefreshTimeout);
+            }
+            mapRefreshTimeout = setTimeout(function() {
+                if (map._popup && map._popup.isOpen()) return;
+                loadLibraries();
+            }, 400);
+        }
+
+        // Reload libraries when map view changes
+        map.on('moveend', debouncedLoadLibraries);
+
+        // =================================================================
+        // Initialize
+        // =================================================================
+        loadLibraries();
+        setInterval(loadLibraries, 5 * 60 * 1000);
+    </script>
+    <script src="{% static 'libraries/js/phase1-enhancements.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+{# Rate Limited Partial - Shows when user hits submission limit #}
+
+<div class="text-center py-4">
+    <div class="mb-4">
+        <div style="
+            width: 80px;
+            height: 80px;
+            background: var(--color-accent-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        ">
+            <i class="bi bi-hourglass-split" style="font-size: 2.5rem; color: var(--color-accent-500);"></i>
+        </div>
+    </div>
+
+    <h4 style="font-family: var(--font-display); margin-bottom: 12px;">
+        Whoa, Slow Down There!
+    </h4>
+
+    <p class="text-muted mb-4">
+        {{ message }}
+    </p>
+
+    {% if seconds_remaining > 0 %}
+    <div id="countdown-display" style="
+        font-family: var(--font-display);
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-neutral-800);
+        margin-bottom: 16px;
+    ">
+        {{ time_remaining }}
+    </div>
+
+    <p class="text-muted" style="font-size: 0.875rem;">
+        This limit helps us prevent spam and keep the service free for everyone.
+    </p>
+
+    <script>
+        (function() {
+            let seconds = {{ seconds_remaining }};
+            const display = document.getElementById('countdown-display');
+
+            function formatTime(secs) {
+                if (secs < 60) {
+                    return secs + ' second' + (secs !== 1 ? 's' : '');
+                } else if (secs < 3600) {
+                    const mins = Math.floor(secs / 60);
+                    const remainingSecs = secs % 60;
+                    if (remainingSecs > 0) {
+                        return mins + ':' + String(remainingSecs).padStart(2, '0');
+                    }
+                    return mins + ' minute' + (mins !== 1 ? 's' : '');
+                } else {
+                    const hours = Math.floor(secs / 3600);
+                    const mins = Math.floor((secs % 3600) / 60);
+                    if (mins > 0) {
+                        return hours + 'h ' + mins + 'm';
+                    }
+                    return hours + ' hour' + (hours !== 1 ? 's' : '');
+                }
+            }
+
+            const interval = setInterval(function() {
+                seconds--;
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    display.innerHTML = '<span style="color: var(--color-fresh);">Ready to go!</span>';
+
+                    // Add refresh button
+                    const container = display.parentElement;
+                    const refreshBtn = document.createElement('button');
+                    refreshBtn.className = 'btn btn-primary mt-3';
+                    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Try Again';
+                    refreshBtn.onclick = function() {
+                        dismissRateLimitPanel();
+                    };
+                    container.appendChild(refreshBtn);
+                } else {
+                    display.textContent = formatTime(seconds);
+                }
+            }, 1000);
+        })();
+    </script>
+    {% endif %}
+
+    <div class="mt-4">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                onclick="dismissRateLimitPanel()">
+            <i class="bi bi-x-lg me-1"></i>Close
+        </button>
+    </div>
+</div>
+
+<script>
+function dismissRateLimitPanel() {
+    // Map page: dismiss the open offcanvas
+    const offcanvas = document.querySelector('.offcanvas.show');
+    if (offcanvas) {
+        const instance = bootstrap.Offcanvas.getInstance(offcanvas);
+        if (instance) { instance.hide(); return; }
+    }
+    // Standalone page: reload to return to the library detail
+    window.location.reload();
+}
+</script>

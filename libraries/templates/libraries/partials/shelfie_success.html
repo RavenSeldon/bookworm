@@ -1,0 +1,46 @@
+{# Shelfie Upload Success Partial #}
+
+<div class="submission-success" data-message="Shelfie uploaded! Thanks for sharing.">
+    <div class="success-icon">
+        <i class="bi bi-camera-fill"></i>
+    </div>
+
+    <h4>Shelfie Added!</h4>
+
+    <p class="text-muted mb-4">
+        Thanks for sharing what's inside. Your photo is now live and helps others
+        discover great books or local supplies.
+    </p>
+
+    {% if shelfie.photo %}
+    <div class="mb-4">
+        <img src="{{ shelfie.photo.url }}"
+             alt="Your shelfie"
+             style="max-width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-lg);">
+    </div>
+    {% endif %}
+
+    {% if shelfie.book_highlights %}
+    <div class="library-highlights-card mb-4">
+        <div class="label">
+            <i class="bi bi-book"></i> Book Highlights
+        </div>
+        <p>{{ shelfie.book_highlights }}</p>
+    </div>
+    {% endif %}
+
+    <div class="d-grid gap-2">
+        <button type="button"
+                class="btn btn-primary"
+                hx-get="{{ library.get_absolute_url }}"
+                hx-target="#library-detail-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-map me-2"></i>Back to Library
+        </button>
+    </div>
+
+    <p class="text-muted mt-4 mb-0" style="font-size: 0.8125rem;">
+        <i class="bi bi-heart-fill me-1" style="color: #ef4444;"></i>
+        You're helping build a community resource!
+    </p>
+</div>

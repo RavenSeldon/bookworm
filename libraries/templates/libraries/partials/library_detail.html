@@ -1,0 +1,177 @@
+{% comment %}
+Library Detail Partial - Loaded via HTMX into offcanvas
+{% endcomment %}
+
+<div class="library-detail fade-in">
+    <!-- Header -->
+    <div class="library-detail-header">
+        <h4 class="library-detail-title">{{ library.name|default:"Little Free Library" }}</h4>
+        <span class="freshness-badge freshness-{{ library.freshness_status|cut:'_' }}">
+            <i class="bi bi-clock"></i>
+            {% if library.freshness_status == 'fresh' %}Fresh
+            {% elif library.freshness_status == 'stale' %}Stale
+            {% else %}Needs Visit{% endif %}
+        </span>
+    </div>
+
+    <!-- Description -->
+    {% if library.description %}
+    <p class="text-muted mb-3">{{ library.description }}</p>
+    {% endif %}
+
+    <!-- Meta Info -->
+    <div class="library-detail-meta">
+        <span class="library-detail-meta-item">
+            <i class="bi bi-camera"></i>
+            {{ library.shelfies.count }} shelfie{{ library.shelfies.count|pluralize }}
+        </span>
+        <span class="library-detail-meta-item">
+            <i class="bi bi-calendar3"></i>
+            Updated {{ library.last_updated|timesince }} ago
+        </span>
+    </div>
+
+    <!-- Latest Highlights -->
+    {% if library.latest_shelfie and library.latest_shelfie.book_highlights %}
+    <div class="library-highlights-card">
+        <div class="label">
+            <i class="bi bi-chat-quote"></i>
+            Latest Book Highlights
+        </div>
+        <p>{{ library.latest_shelfie.book_highlights }}</p>
+    </div>
+    {% endif %}
+
+  <!-- Shelfie Carousel -->
+    {% if shelfies %}
+    <h6 class="library-detail-section-title">
+        <i class="bi bi-images me-1"></i>
+        Shelfies
+        <span class="text-muted fw-normal" style="font-size: 0.75rem; margin-left: 4px;">
+            — tap to expand
+        </span>
+    </h6>
+
+    <div class="shelfie-carousel-container">
+        <div class="shelfie-carousel" id="shelfie-carousel">
+            {% for shelfie in shelfies %}
+            <div class="shelfie-card {% if forloop.first %}shelfie-card-latest{% endif %}"
+                 data-shelfie-index="{{ forloop.counter0 }}"
+                 data-shelfie-pk="{{ shelfie.pk }}"
+                 data-shelfie-url="{{ shelfie.photo.url }}"
+                 data-shelfie-date="{{ shelfie.uploaded_at|date:'M j, Y' }}"
+                 data-shelfie-highlights="{{ shelfie.book_highlights|default:'' }}"
+                 onclick="openShelfieViewer(this)">
+                {% if forloop.first %}
+                <div class="shelfie-card-badge">Latest</div>
+                {% endif %}
+
+               <!-- Report Button -->
+                <button type="button"
+                        class="shelfie-report-btn"
+                        onclick="event.stopPropagation(); openShelfieReport({{ shelfie.pk }})"
+                        title="Report this photo"
+                        aria-label="Report this photo">
+                    <i class="bi bi-flag"></i>
+                </button>
+
+                <div class="shelfie-card-image-container">
+                    <img src="{{ shelfie.photo.url }}"
+                         alt="Shelfie from {{ shelfie.uploaded_at|date:'M j, Y' }}"
+                         class="shelfie-card-image"
+                         loading="lazy">
+                </div>
+
+                <div class="shelfie-card-content">
+                    <div class="shelfie-card-date">
+                        <i class="bi bi-calendar3"></i>
+                        {{ shelfie.uploaded_at|date:"M j, Y" }}
+                    </div>
+
+                    {% if shelfie.book_highlights %}
+                    <p class="shelfie-card-highlights">
+                        {{ shelfie.book_highlights|truncatewords:15 }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Shelfie Lightbox Viewer -->
+    <div class="shelfie-lightbox" id="shelfie-lightbox">
+        <div class="shelfie-lightbox-backdrop" onclick="closeShelfieViewer()"></div>
+
+        <button class="shelfie-lightbox-close" onclick="closeShelfieViewer()" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+        </button>
+
+        <button class="shelfie-lightbox-nav shelfie-lightbox-prev" onclick="navigateShelfie(-1)" aria-label="Previous">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <button class="shelfie-lightbox-nav shelfie-lightbox-next" onclick="navigateShelfie(1)" aria-label="Next">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+
+        <div class="shelfie-lightbox-content">
+            <div class="shelfie-lightbox-image-wrapper">
+                <img src="" alt="Expanded shelfie" class="shelfie-lightbox-image" id="lightbox-image">
+            </div>
+
+            <div class="shelfie-lightbox-info" id="lightbox-info">
+                <div class="shelfie-lightbox-counter" id="lightbox-counter">1 / 5</div>
+                <div class="shelfie-lightbox-date" id="lightbox-date"></div>
+                <p class="shelfie-lightbox-highlights" id="lightbox-highlights"></p>
+
+                <!-- Report Button in Lightbox -->
+                <button type="button"
+                        class="btn btn-sm btn-outline-warning mt-2"
+                        id="lightbox-report-btn"
+                        onclick="reportCurrentShelfie()">
+                    <i class="bi bi-flag me-1"></i>Report Photo
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="shelfie-empty-state">
+        <div style="width: 64px; height: 64px; background: var(--color-primary-100); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+            <i class="bi bi-camera" style="font-size: 1.5rem; color: var(--color-primary-500);"></i>
+        </div>
+        <p class="mb-2" style="font-weight: 500; color: var(--color-neutral-700);">No shelfies yet</p>
+        <p class="text-muted mb-0" style="font-size: 0.875rem;">Snap a photo of what's inside to help others discover great books!</p>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="d-grid gap-2 mb-3">
+        <button type="button"
+                class="btn btn-primary"
+                hx-get="{% url 'libraries:shelfie_form' library.pk %}"
+                hx-target="#library-detail-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-camera"></i>
+            Add a Shelfie
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{% url 'libraries:report_form' library.pk %}"
+                hx-target="#library-detail-content"
+                hx-swap="innerHTML">
+            <i class="bi bi-flag"></i>
+            Report an Issue
+        </button>
+    </div>
+
+    <!-- Coordinates -->
+    <div class="library-detail-coordinates">
+        <i class="bi bi-geo-alt me-1"></i>
+        lat. {{ library.location.y|floatformat:5 }}, lng. {{ library.location.x|floatformat:5 }} &nbsp; | &nbsp; Bookworm: Little Library Finder
+    </div>
+</div>

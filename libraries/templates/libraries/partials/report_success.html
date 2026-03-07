@@ -1,0 +1,36 @@
+{% comment %}
+Report Success Partial - Shown after successful issue report
+{% endcomment %}
+
+<div class="submission-success fade-in" data-message="Issue reported. Thank you!">
+    <div class="success-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <h4>Report Submitted</h4>
+
+    <p class="text-muted mb-4">
+        Thank you for helping keep our data accurate! Our team will review this report and take appropriate action.
+    </p>
+
+    <div class="card mb-4">
+        <div class="card-body text-start">
+            <h6 class="mb-2">
+                <i class="bi bi-flag me-2 text-warning"></i>
+                {{ report.get_issue_type_display }}
+            </h6>
+            {% if report.description %}
+            <small class="text-muted">{{ report.description }}</small>
+            {% endif %}
+        </div>
+    </div>
+
+    <button type="button"
+            class="btn btn-outline-primary"
+            hx-get="{{ library.get_absolute_url }}"
+            hx-target="#library-detail-content"
+            hx-swap="innerHTML">
+        <i class="bi bi-arrow-left me-2"></i>
+        Back to Library
+    </button>
+</div>

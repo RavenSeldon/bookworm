@@ -1,0 +1,197 @@
+{# Submit Library Form Partial #}
+{% comment %}
+   - Address search with Nominatim
+   - Anti-bot timestamp
+   - Client-side validation info
+   - Better UX flow
+{% endcomment %}
+<form method="post"
+      action="{% url 'libraries:submit_library' %}"
+      enctype="multipart/form-data"
+      hx-post="{% url 'libraries:submit_library' %}"
+      hx-target="#submit-form-container"
+      hx-swap="innerHTML"
+      id="library-submit-form">
+    {% csrf_token %}
+
+    {# Honeypot field (hidden from users, visible to bots) #}
+    <input type="text" name="website_url" class="hp-field" tabindex="-1" autocomplete="off">
+
+    {# Anti-bot timing - tracks when form was loaded #}
+    <input type="hidden" name="_form_loaded_at" value="{{ form_loaded_at }}">
+
+    <!-- Location -->
+    <div class="mb-4">
+        <label class="form-label d-flex align-items-center gap-2">
+            <i class="bi bi-geo-alt text-primary"></i>
+            <span>Library Location <span class="text-danger">*</span></span>
+        </label>
+
+        {# Address Search #}
+        <div class="address-search-container position-relative mb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text"
+                       id="address-search-input"
+                       class="form-control"
+                       placeholder="Search for an address..."
+                       autocomplete="off">
+            </div>
+            <div id="address-search-results"
+                 style="display: none;
+                        position: absolute;
+                        top: 100%;
+                        left: 0;
+                        right: 0;
+                        background: white;
+                        border: 1px solid var(--color-neutral-300);
+                        border-radius: var(--radius-md);
+                        box-shadow: var(--shadow-lg);
+                        max-height: 200px;
+                        overflow-y: auto;
+                        z-index: 1100;">
+            </div>
+            <small class="text-muted d-block mt-1">
+                <i class="bi bi-info-circle me-1"></i>
+                Search or tap the map below to set location
+            </small>
+        </div>
+
+        {# Map Picker #}
+        <div id="location-picker-map"></div>
+
+        {# Use My Location Button #}
+        <button type="button"
+                id="use-my-location"
+                class="btn btn-outline-secondary w-100 mb-2">
+            <i class="bi bi-crosshairs me-2"></i>Use My Location
+        </button>
+
+        {# Location Display (shows when location is selected) #}
+        <div id="location-display" class="d-none"></div>
+
+        {# Hidden coordinate fields #}
+        <input type="hidden" name="latitude" id="id_latitude" value="">
+        <input type="hidden" name="longitude" id="id_longitude" value="">
+
+        {% if form.latitude.errors or form.longitude.errors %}
+        <div class="invalid-feedback d-block">
+            Please select a location for the library on the map.
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Photo -->
+    <div class="mb-4">
+        <label class="form-label d-flex align-items-center gap-2" for="id_photo">
+            <i class="bi bi-camera text-primary"></i>
+            <span>Photo of the Library <span class="text-danger">*</span></span>
+        </label>
+        <input type="file"
+               name="photo"
+               id="id_photo"
+               accept="image/*"
+               capture="environment"
+               class="form-control {% if form.photo.errors %}is-invalid{% endif %}"
+               required>
+        <small class="form-text">
+            Take a photo showing the library clearly (max {{ max_upload_size_mb }}MB)
+        </small>
+        {% if form.photo.errors %}
+        <div class="invalid-feedback">{{ form.photo.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Optional Details -->
+    <div class="card bg-light mb-4">
+        <div class="card-body">
+            <p class="text-muted mb-3" style="font-size: 0.8125rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                Optional details help others find and recognize this library
+            </p>
+
+            {# Library Name #}
+            <div class="mb-3">
+                <label class="form-label" for="id_name">
+                    Library Name <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <input type="text"
+                       name="name"
+                       id="id_name"
+                       class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+                       placeholder="e.g., Oak Street Library, The Red Box"
+                       value="{{ form.name.value|default:'' }}"
+                       maxlength="255">
+                {% if form.name.errors %}
+                <div class="invalid-feedback">{{ form.name.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            {# Book Highlights #}
+            <div class="mb-3">
+                <label class="form-label" for="id_book_highlights">
+                    What Books Are Inside? <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <textarea name="book_highlights"
+                          id="id_book_highlights"
+                          class="form-control"
+                          rows="2"
+                          placeholder="e.g., Kids books, mysteries, sci-fi, cookbooks...">{{ form.book_highlights.value|default:'' }}</textarea>
+            </div>
+
+            {# Description #}
+            <div class="mb-3">
+                <label class="form-label" for="id_description">
+                    Description / Directions <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <textarea name="description"
+                          id="id_description"
+                          class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                          rows="2"
+                          placeholder="e.g., Next to the red mailbox, look for the blue door...">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <div class="invalid-feedback">{{ form.description.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            {# Email #}
+            <div>
+                <label class="form-label" for="id_submitted_by_email">
+                    Your Email <span class="text-muted fw-normal">(optional)</span>
+                </label>
+                <input type="email"
+                       name="submitted_by_email"
+                       id="id_submitted_by_email"
+                       class="form-control {% if form.submitted_by_email.errors %}is-invalid{% endif %}"
+                       placeholder="For admin contact only"
+                       value="{{ form.submitted_by_email.value|default:'' }}">
+                <small class="form-text">Only used if we need to verify the submission</small>
+                {% if form.submitted_by_email.errors %}
+                <div class="invalid-feedback">{{ form.submitted_by_email.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Non-field errors #}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}
+            {{ error }}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Submit -->
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-send me-2"></i>Submit Library
+        </button>
+        <p class="text-center text-muted mb-0" style="font-size: 0.8125rem;">
+            <i class="bi bi-shield-check me-1"></i>
+            Submissions are reviewed before appearing on the map
+        </p>
+    </div>
+</form>

@@ -1,0 +1,39 @@
+# =============================================================================
+# Bookworm: Little Library Finder — Python Dependencies
+# =============================================================================
+# Install: pip install -r requirements.txt
+# =============================================================================
+
+# Django
+Django>=5.0,<6.0
+
+# GeoDjango / PostGIS
+psycopg2-binary>=2.9
+
+# Cloudinary (image storage + CDN)
+cloudinary>=1.36
+django-cloudinary-storage>=0.3.0
+
+# Static files (production)
+whitenoise>=6.5
+
+# Production WSGI server
+gunicorn>=21.2
+
+# Environment variables
+python-dotenv>=1.0
+
+# HTTP requests (Nominatim geocoding)
+requests>=2.31
+
+# Structured JSON logging (production)
+python-json-logger>=2.0
+
+# Railway DATABASE_URL support
+dj-database-url>=2.1
+
+# =============================================================================
+# Development / Testing (optional)
+# =============================================================================
+pytest>=8.0
+pytest-django>=4.7

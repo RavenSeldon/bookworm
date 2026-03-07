@@ -1,0 +1,107 @@
+{# Shelfie Report Form Partial - For reporting issues with a specific photo #}
+
+<form method="post"
+      action="{% url 'libraries:report_shelfie' shelfie_pk=shelfie.pk %}"
+      hx-post="{% url 'libraries:report_shelfie' shelfie_pk=shelfie.pk %}"
+      hx-target="#library-detail-content"
+      hx-swap="innerHTML"
+      id="shelfie-report-form">
+    {% csrf_token %}
+
+    {# Honeypot #}
+    <input type="text" name="website_url" class="hp-field" tabindex="-1" autocomplete="off">
+
+    {# Back Link #}
+    <button type="button"
+            class="btn btn-link p-0 mb-3"
+            hx-get="{{ library.get_absolute_url }}"
+            hx-target="#library-detail-content"
+            hx-swap="innerHTML">
+        <i class="bi bi-arrow-left me-1"></i>
+        Back to {{ library.name|default:"Library"|truncatechars:20 }}
+    </button>
+
+    {# Photo Preview Card #}
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            {% if shelfie.photo %}
+            <img src="{{ shelfie.photo.url }}"
+                 alt="Photo being reported"
+                 style="width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+            {% endif %}
+            <div class="p-3">
+                <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 0.8125rem;">
+                    <i class="bi bi-camera"></i>
+                    <span>Photo from {{ library.name|default:"this library" }}</span>
+                </div>
+                <div class="text-muted" style="font-size: 0.75rem;">
+                    Uploaded {{ shelfie.uploaded_at|timesince }} ago
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Issue Type #}
+    <div class="mb-4">
+        <label class="form-label d-flex align-items-center gap-2" for="id_issue_type">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            <span>What's wrong with this photo? <span class="text-danger">*</span></span>
+        </label>
+        <select name="issue_type"
+                id="id_issue_type"
+                class="form-select {% if form.issue_type.errors %}is-invalid{% endif %}"
+                required>
+            <option value="">Select an issue...</option>
+            {% for value, label in form.fields.issue_type.choices %}
+            <option value="{{ value }}" {% if form.issue_type.value == value %}selected{% endif %}>
+                {{ label }}
+            </option>
+            {% endfor %}
+        </select>
+        {% if form.issue_type.errors %}
+        <div class="invalid-feedback">{{ form.issue_type.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    {# Description #}
+    <div class="mb-4">
+        <label class="form-label" for="id_description">
+            Additional Details <span class="text-muted fw-normal">(optional)</span>
+        </label>
+        <textarea name="description"
+                  id="id_description"
+                  class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                  rows="3"
+                  placeholder="Describe the issue with this photo...">{{ form.description.value|default:'' }}</textarea>
+        {% if form.description.errors %}
+        <div class="invalid-feedback">{{ form.description.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    {# Errors #}
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    {# Info Note #}
+    <div class="alert alert-light mb-4" role="alert" style="font-size: 0.875rem;">
+        <i class="bi bi-info-circle me-2"></i>
+        Reports are reviewed by the admin. Inappropriate photos will be removed.
+    </div>
+
+    {# Submit #}
+    <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-warning">
+            <i class="bi bi-flag me-2"></i>Report Photo
+        </button>
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{{ library.get_absolute_url }}"
+                hx-target="#library-detail-content"
+                hx-swap="innerHTML">
+            Cancel
+        </button>
+    </div>
+</form>

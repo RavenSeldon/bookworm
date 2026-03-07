@@ -1,0 +1,84 @@
+{# Form Error Partial - Displayed when submission fails #}
+
+<div class="text-center py-4">
+    <div class="mb-4">
+        <div style="
+            width: 80px;
+            height: 80px;
+            background: var(--color-danger-bg, #fef2f2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        ">
+            <i class="bi bi-exclamation-triangle" style="font-size: 2.5rem; color: var(--color-danger, #ef4444);"></i>
+        </div>
+    </div>
+
+    <h4 style="font-family: var(--font-display); margin-bottom: 12px;">
+        {{ error|default:"Something went wrong" }}
+    </h4>
+
+    {% if retry_allowed %}
+    <p class="text-muted mb-4">
+        Don't worry — your submission hasn't been lost. You can try again.
+    </p>
+
+    <div class="d-grid gap-2" style="max-width: 280px; margin: 0 auto;">
+        <button type="button"
+                class="btn btn-primary"
+                onclick="history.back()">
+            <i class="bi bi-arrow-clockwise me-2"></i>Try Again
+        </button>
+
+        {% if library %}
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{{ library.get_absolute_url }}"
+                hx-target="#library-detail-content"
+                hx-swap="innerHTML">
+            Cancel
+        </button>
+        {% else %}
+        <button type="button"
+                class="btn btn-outline-secondary"
+                onclick="dismissErrorPanel()">
+            Cancel
+        </button>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-muted mb-4">
+        Please try again in a moment.
+    </p>
+
+    {% if library %}
+    <button type="button"
+            class="btn btn-outline-secondary"
+            hx-get="{{ library.get_absolute_url }}"
+            hx-target="#library-detail-content"
+            hx-swap="innerHTML">
+        <i class="bi bi-arrow-left me-1"></i>Back to Library
+    </button>
+    {% else %}
+    <button type="button"
+            class="btn btn-outline-secondary"
+            onclick="dismissErrorPanel()">
+        <i class="bi bi-x-lg me-1"></i>Close
+    </button>
+    {% endif %}
+    {% endif %}
+</div>
+
+<script>
+function dismissErrorPanel() {
+    // Try to dismiss offcanvas (map page), fall back to page reload (standalone)
+    const offcanvas = document.querySelector('.offcanvas.show');
+    if (offcanvas) {
+        const instance = bootstrap.Offcanvas.getInstance(offcanvas);
+        if (instance) { instance.hide(); return; }
+    }
+    window.location.reload();
+}
+</script>

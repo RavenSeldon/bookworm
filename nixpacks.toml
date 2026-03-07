@@ -1,0 +1,12 @@
+# =============================================================================
+# Bookworm: Nixpacks Configuration for Railway
+# =============================================================================
+# Railway uses Nixpacks to build. GeoDjango requires system-level
+# geospatial libraries (GDAL, GEOS, PROJ) that aren't in pip.
+# =============================================================================
+
+[phases.setup]
+nixPkgs = ["gdal", "geos", "proj"]
+
+[phases.build]
+cmds = ["pip install -r requirements.txt"]

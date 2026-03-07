@@ -1,0 +1,71 @@
+{# Submit Success Partial - Shown after successful library submission #}
+
+<div class="submission-success" data-message="Library submitted! It will appear after review.">
+    <div class="success-icon">
+        <i class="bi bi-check-lg"></i>
+    </div>
+
+    <h4>Thank You!</h4>
+
+    <p class="text-muted mb-4">
+        Your library submission has been received and is pending review.
+        We'll add it to the map once verified.
+    </p>
+
+    <div class="card bg-light mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center gap-3">
+                <div style="
+                    width: 48px;
+                    height: 48px;
+                    background: var(--color-primary-100);
+                    border-radius: var(--radius-md);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <i class="bi bi-book-half text-primary" style="font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1">{{ library.name|default:"New Library" }}</h6>
+                    <span class="text-muted" style="font-size: 0.8125rem;">
+                        {{ library.location.y|floatformat:5 }}, {{ library.location.x|floatformat:5 }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2">
+        <button type="button"
+                class="btn btn-primary"
+                onclick="closeSubmitPanel()">
+            <i class="bi bi-map me-2"></i>Back to Map
+        </button>
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{% url 'libraries:submit_form' %}"
+                hx-target="#submit-form-container"
+                hx-swap="innerHTML">
+            <i class="bi bi-plus-lg me-2"></i>Add Another Library
+        </button>
+    </div>
+
+    <p class="text-muted mt-4 mb-0" style="font-size: 0.8125rem;">
+        <i class="bi bi-clock-history me-1"></i>
+        Reviews typically take 24-48 hours
+    </p>
+</div>
+
+<script>
+function closeSubmitPanel() {
+    const offcanvas = document.querySelector('.offcanvas.show');
+    if (offcanvas) {
+        const instance = bootstrap.Offcanvas.getInstance(offcanvas);
+        if (instance) { instance.hide(); return; }
+    }
+    // Fallback: navigate to map
+    window.location.href = '{% url "libraries:map" %}';
+}
+</script>

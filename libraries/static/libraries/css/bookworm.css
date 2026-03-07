@@ -1,0 +1,914 @@
+/* =================================================================
+   Bookworm: Little Library Finder — Shared Design System
+   =================================================================
+   Imported by: map.html, library_detail_page.html, landing.html
+   ================================================================= */
+
+/* =================================================================
+   DESIGN SYSTEM - CSS Variables
+   ================================================================= */
+:root {
+    /* Primary Palette - Warm Teal/Forest */
+    --color-primary-900: #0d3028;
+    --color-primary-800: #1a5f4a;
+    --color-primary-700: #228264;
+    --color-primary-600: #2a9d7a;
+    --color-primary-500: #34b88f;
+    --color-primary-400: #5fc9a7;
+    --color-primary-300: #8edad0;
+    --color-primary-200: #c4ede5;
+    --color-primary-100: #e8f8f4;
+    --color-primary-50: #f4fcfa;
+
+    /* Accent Palette - Warm Amber */
+    --color-accent-600: #b45309;
+    --color-accent-500: #d97706;
+    --color-accent-400: #f59e0b;
+    --color-accent-300: #fbbf24;
+    --color-accent-200: #fcd34d;
+    --color-accent-100: #fef3c7;
+
+    /* Neutral Palette - Warm Grays */
+    --color-neutral-900: #1c1917;
+    --color-neutral-800: #292524;
+    --color-neutral-700: #44403c;
+    --color-neutral-600: #57534e;
+    --color-neutral-500: #78716c;
+    --color-neutral-400: #a8a29e;
+    --color-neutral-300: #d6d3d1;
+    --color-neutral-200: #e7e5e4;
+    --color-neutral-100: #f5f5f4;
+    --color-neutral-50: #fafaf9;
+
+    /* Semantic Colors */
+    --color-fresh: #22c55e;
+    --color-fresh-bg: #dcfce7;
+    --color-stale: #f59e0b;
+    --color-stale-bg: #fef3c7;
+    --color-needs-visit: #78716c;
+    --color-needs-visit-bg: #f5f5f4;
+    --color-danger: #ef4444;
+    --color-danger-bg: #fef2f2;
+
+    /* Typography */
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+
+    /* Spacing */
+    --header-height: 64px;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.07);
+    --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.08), 0 4px 6px -4px rgba(28, 25, 23, 0.08);
+    --shadow-xl: 0 20px 25px -5px rgba(28, 25, 23, 0.1), 0 8px 10px -6px rgba(28, 25, 23, 0.1);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 350ms ease;
+}
+
+/* =================================================================
+   BASE STYLES
+   ================================================================= */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-neutral-800);
+    background: var(--color-neutral-100);
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--color-neutral-900);
+}
+
+/* =================================================================
+   HEADER / NAVBAR
+   ================================================================= */
+.navbar {
+    height: var(--header-height);
+    background: linear-gradient(135deg, var(--color-primary-800) 0%, var(--color-primary-700) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-md);
+    flex-shrink: 0;
+    z-index: 1030;
+}
+
+.navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: white !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: opacity var(--transition-fast);
+    text-decoration: none;
+}
+
+.navbar-brand:hover {
+    opacity: 0.9;
+}
+
+.navbar-brand img {
+    display: block;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+}
+
+/* =================================================================
+   FRESHNESS BADGES
+   ================================================================= */
+.freshness-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.freshness-badge i {
+    font-size: 0.625rem;
+}
+
+.freshness-fresh {
+    background: var(--color-fresh-bg);
+    color: #15803d;
+}
+
+.freshness-stale {
+    background: var(--color-stale-bg);
+    color: #b45309;
+}
+
+.freshness-needs-visit,
+.freshness-needsvisit {
+    background: var(--color-needs-visit-bg);
+    color: var(--color-neutral-600);
+}
+
+/* =================================================================
+   FORM STYLES
+   ================================================================= */
+.form-label {
+    font-weight: 500;
+    color: var(--color-neutral-700);
+    margin-bottom: 6px;
+    font-size: 0.875rem;
+}
+
+.form-label .text-danger {
+    color: var(--color-danger);
+}
+
+.form-control, .form-select {
+    border: 1.5px solid var(--color-neutral-300);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    font-size: 0.9375rem;
+    transition: all var(--transition-fast);
+    background: white;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 4px rgba(42, 157, 122, 0.1);
+    outline: none;
+}
+
+.form-control::placeholder {
+    color: var(--color-neutral-400);
+}
+
+.form-text {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+    margin-top: 6px;
+}
+
+.form-control.is-invalid {
+    border-color: var(--color-danger);
+}
+
+.invalid-feedback {
+    color: var(--color-danger);
+    font-size: 0.8125rem;
+}
+
+/* =================================================================
+   BUTTON STYLES
+   ================================================================= */
+.btn {
+    font-family: var(--font-body);
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    padding: 10px 20px;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+    border: none;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-800) 100%);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-outline-secondary {
+    border: 1.5px solid var(--color-neutral-300);
+    color: var(--color-neutral-700);
+    background: white;
+}
+
+.btn-outline-secondary:hover {
+    border-color: var(--color-neutral-400);
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-800);
+}
+
+.btn-outline-primary {
+    border: 1.5px solid var(--color-primary-600);
+    color: var(--color-primary-700);
+    background: white;
+}
+
+.btn-outline-primary:hover {
+    background: var(--color-primary-100);
+    color: var(--color-primary-800);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, var(--color-accent-500) 0%, var(--color-accent-600) 100%);
+    border: none;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, var(--color-accent-600) 0%, #92400e 100%);
+}
+
+.btn-link {
+    color: var(--color-primary-700);
+    text-decoration: none;
+    padding: 0;
+}
+
+.btn-link:hover {
+    color: var(--color-primary-800);
+}
+
+.btn-lg {
+    padding: 14px 28px;
+    font-size: 1rem;
+    border-radius: var(--radius-lg);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+}
+
+/* =================================================================
+   CARD STYLES
+   ================================================================= */
+.card {
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.card.bg-light {
+    background: var(--color-neutral-50) !important;
+    border-color: var(--color-neutral-200);
+}
+
+.card-body {
+    padding: 16px;
+}
+
+/* =================================================================
+   SHELFIE REPORT BUTTON
+   ================================================================= */
+.shelfie-report-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    z-index: 10;
+}
+
+.shelfie-card:hover .shelfie-report-btn,
+.shelfie-card:focus-within .shelfie-report-btn {
+    opacity: 1;
+}
+
+.shelfie-report-btn:hover {
+    background: var(--color-accent-500);
+}
+
+.shelfie-report-btn:focus {
+    opacity: 1;
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+}
+
+/* Mobile: always show report button */
+@media (max-width: 767px) {
+    .shelfie-report-btn {
+        opacity: 0.7;
+    }
+}
+
+/* =================================================================
+   SHELFIE CAROUSEL
+   ================================================================= */
+.shelfie-carousel-container {
+    margin: 0 -20px; /* Bleed to edges of container */
+    padding: 0 20px;
+    overflow: hidden;
+}
+
+.shelfie-carousel {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+    padding-bottom: 8px;
+}
+
+.shelfie-carousel::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.shelfie-card {
+    flex: 0 0 auto;
+    width: 200px;
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-neutral-200);
+    overflow: hidden;
+    scroll-snap-align: start;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    position: relative;
+    cursor: pointer;
+}
+
+.shelfie-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.shelfie-card-latest {
+    border-color: var(--color-primary-300);
+    background: linear-gradient(to bottom, var(--color-primary-50), white);
+}
+
+.shelfie-card-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--color-primary-600);
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 8px;
+    border-radius: var(--radius-full);
+    z-index: 1;
+}
+
+.shelfie-card-image-container {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--color-neutral-100);
+}
+
+.shelfie-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+}
+
+.shelfie-card:hover .shelfie-card-image {
+    transform: scale(1.05);
+}
+
+.shelfie-card-content {
+    padding: 12px;
+}
+
+.shelfie-card-date {
+    font-size: 0.75rem;
+    color: var(--color-neutral-500);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.shelfie-card-highlights {
+    font-size: 0.8125rem;
+    color: var(--color-neutral-700);
+    margin: 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Empty State */
+.shelfie-empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    background: var(--color-neutral-50);
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-neutral-300);
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .shelfie-card {
+        width: 180px;
+    }
+
+    .shelfie-carousel-container {
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+}
+
+/* =================================================================
+   SHELFIE LIGHTBOX VIEWER
+   ================================================================= */
+.shelfie-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.shelfie-lightbox.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.shelfie-lightbox-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    cursor: pointer;
+}
+
+.shelfie-lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+}
+
+.shelfie-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.shelfie-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.shelfie-lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.shelfie-lightbox-prev {
+    left: 16px;
+}
+
+.shelfie-lightbox-prev:hover {
+    transform: translateY(-50%) translateX(-2px);
+}
+
+.shelfie-lightbox-next {
+    right: 16px;
+}
+
+.shelfie-lightbox-next:hover {
+    transform: translateY(-50%) translateX(2px);
+}
+
+.shelfie-lightbox-content {
+    position: relative;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    padding: 20px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+/* Image container - enforces boundaries */
+.shelfie-lightbox-image-wrapper {
+    flex: 1;
+    min-height: 0; /* Critical for flexbox to allow shrinking */
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.shelfie-lightbox-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+}
+
+.shelfie-lightbox-info {
+    flex-shrink: 0;
+    padding: 16px 0;
+    text-align: center;
+    color: white;
+    max-width: 400px;
+    pointer-events: auto;
+}
+
+.shelfie-lightbox-counter {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 4px;
+}
+
+.shelfie-lightbox-date {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 8px;
+}
+
+.shelfie-lightbox-highlights {
+    font-size: 0.9375rem;
+    color: white;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Lightbox mobile adjustments */
+@media (max-width: 576px) {
+    .shelfie-lightbox-content {
+        padding: 60px 16px 20px 16px;
+        width: 100%;
+        height: 100%;
+    }
+
+    .shelfie-lightbox-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+
+    .shelfie-lightbox-prev {
+        left: 8px;
+    }
+
+    .shelfie-lightbox-next {
+        right: 8px;
+    }
+
+    .shelfie-lightbox-close {
+        top: 8px;
+        right: 8px;
+    }
+
+    .shelfie-lightbox-image {
+        border-radius: var(--radius-md);
+    }
+
+    .shelfie-lightbox-info {
+        padding: 12px 16px;
+    }
+}
+
+/* =================================================================
+   SUCCESS STATE
+   ================================================================= */
+.submission-success {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.submission-success .success-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--color-fresh-bg);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+}
+
+.submission-success .success-icon i {
+    font-size: 2.5rem;
+    color: var(--color-fresh);
+}
+
+.submission-success h4 {
+    font-family: var(--font-display);
+    margin-bottom: 12px;
+}
+
+/* =================================================================
+   LIBRARY DETAIL VIEW
+   ================================================================= */
+.library-detail-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+}
+
+.library-detail-header {
+    margin-bottom: 16px;
+}
+
+.library-detail-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-neutral-900);
+}
+
+.library-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.8125rem;
+    color: var(--color-neutral-500);
+    margin-bottom: 20px;
+}
+
+.library-detail-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.library-highlights-card {
+    background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-primary-100) 100%);
+    border: 1px solid var(--color-primary-200);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.library-highlights-card .label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-primary-700);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.library-highlights-card p {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--color-neutral-700);
+}
+
+.library-detail-section-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-neutral-800);
+    margin-bottom: 12px;
+}
+
+.library-detail-coordinates {
+    font-size: 0.75rem;
+    color: var(--color-neutral-500);
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid var(--color-neutral-200);
+}
+
+/* =================================================================
+   TOAST STYLES
+   ================================================================= */
+.toast-container {
+    z-index: 1100;
+}
+
+.toast {
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+/* =================================================================
+   HONEYPOT (Hidden from humans)
+   ================================================================= */
+.hp-field {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+    height: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+/* =================================================================
+   SPINNER / LOADING STATES
+   ================================================================= */
+.spinner-border {
+    color: var(--color-primary-600);
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    color: var(--color-neutral-500);
+}
+
+.loading-container p {
+    margin-top: 16px;
+    font-size: 0.875rem;
+}
+
+/* =================================================================
+   ANIMATIONS
+   ================================================================= */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes successPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.submission-success .success-icon {
+    animation: successPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* =================================================================
+   SHARED RESPONSIVE ADJUSTMENTS
+   ================================================================= */
+@media (max-width: 768px) {
+    .navbar {
+        height: 56px;
+    }
+
+    :root {
+        --header-height: 56px;
+    }
+
+    .navbar .container-fluid {
+        justify-content: center;
+        position: relative;
+    }
+
+    .navbar-brand {
+        font-size: 1.15rem;
+        margin: 0;
+    }
+
+    .navbar-brand img {
+        height: 22px;
+        width: auto;
+    }
+
+    /* Position action buttons (Add Library / Explore Map) to the right */
+    .btn-add-library,
+    .btn-explore-map {
+        position: absolute;
+        right: 12px;
+    }
+}
+
+/* =================================================================
+   UTILITY CLASSES
+   ================================================================= */
+.text-primary { color: var(--color-primary-700) !important; }
+.text-muted { color: var(--color-neutral-500) !important; }
+.bg-light { background: var(--color-neutral-50) !important; }
