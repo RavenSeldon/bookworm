@@ -1,0 +1,46 @@
+# =============================================================================
+# Bookworm: .gitignore
+# =============================================================================
+
+# Environment & secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Django
+staticfiles/
+media/
+db.sqlite3
+db.sqlite3-journal
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Virtual environments
+.venv/
+venv/
+ENV/
