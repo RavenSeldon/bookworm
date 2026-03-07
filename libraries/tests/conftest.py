@@ -13,6 +13,17 @@ from django.contrib.gis.geos import Point
 from libraries.models import Library, Shelfie, IssueReport
 
 
+@pytest.fixture(autouse=True)
+def simple_staticfiles(settings):
+    """Use basic static files storage in tests (no manifest required)."""
+    settings.STORAGES = {
+        "default": settings.STORAGES.get("default", {}),
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
+
 @pytest.fixture
 def verified_library(db):
     """A verified, active library with a slug."""

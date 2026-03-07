@@ -512,7 +512,7 @@ def submit_library(request):
 # =============================================================================
 
 @require_POST
-@rate_limit('shelfie_upload', limit=5, period=3600)
+@rate_limit('shelfie_upload', limit=10, period=3600)
 def upload_shelfie(request, library_pk):
     """
     Handle Shelfie uploads to existing libraries.

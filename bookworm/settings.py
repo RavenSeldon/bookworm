@@ -1,6 +1,6 @@
 """
 Django settings for Bookworm: Little Library Finder
-Configured for macOS with Conda environment
+Configured for local development (macOS/Conda) and Railway production.
 """
 
 from dotenv import load_dotenv
@@ -9,6 +9,7 @@ load_dotenv()
 import os
 from pathlib import Path
 import platform
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,7 +34,7 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.environ.get('ALLOWED_HOSTS', 'localhost,subtriquetrous-lashawnda-unsymptomatic.ngrok-free.dev,127.0.0.1,192.168.1.70').split(',')
+    for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
     if h.strip()
 ]
 
@@ -41,7 +42,7 @@ CSRF_TRUSTED_ORIGINS = [
     h.strip()
     for h in os.environ.get(
         'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:8000,http://127.0.0.1:8000,http://192.168.1.70:8000'
+        'http://localhost:8000,http://127.0.0.1:8000'
     ).split(',')
     if h.strip()
 ]
@@ -127,19 +128,34 @@ WSGI_APPLICATION = 'bookworm.wsgi.application'
 # =============================================================================
 # DATABASE (PostgreSQL + PostGIS)
 # =============================================================================
+# Railway provides DATABASE_URL; local dev uses individual DB_* vars.
+# The engine override is critical — dj-database-url defaults to psycopg2,
+# but GeoDjango requires the PostGIS backend.
+# =============================================================================
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': os.environ.get('DB_NAME', 'bookworm'),
-        'USER': os.environ.get('DB_USER', os.environ.get('USER', 'postgres')),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-        'CONN_MAX_AGE': 60,
-        'CONN_HEALTH_CHECKS': True,
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=60,
+            conn_health_checks=True,
+            engine='django.contrib.gis.db.backends.postgis',
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': os.environ.get('DB_NAME', 'bookworm'),
+            'USER': os.environ.get('DB_USER', os.environ.get('USER', 'postgres')),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'CONN_MAX_AGE': 60,
+            'CONN_HEALTH_CHECKS': True,
+        }
+    }
 
 
 # =============================================================================
@@ -173,7 +189,16 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Django 5.x STORAGES format (replaces deprecated STATICFILES_STORAGE)
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 # =============================================================================
@@ -191,8 +216,6 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
     'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
 }
-
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 
 # =============================================================================
@@ -231,7 +254,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # GDAL/GEOS LIBRARY PATHS (macOS with Homebrew)
 # =============================================================================
 
-if platform.system() == 'Darwin': # MacOS
+if platform.system() == 'Darwin':  # macOS
     GDAL_LIBRARY_PATH = '/opt/homebrew/opt/gdal/lib/libgdal.dylib'
     GEOS_LIBRARY_PATH = '/opt/homebrew/opt/geos/lib/libgeos_c.dylib'
 
@@ -250,7 +273,7 @@ LOGGING = {
             'style': '{',
         },
 
-        #JSON format for production
+        # JSON format for production
         'json': {
             '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
             'format': '%(asctime)s %(levelname)s %(name)s %(module)s %(message)s',
@@ -291,6 +314,7 @@ LOGGING = {
         'level': 'WARNING',
     },
 }
+
 # =============================================================================
 # CACHING CONFIGURATION
 # =============================================================================
@@ -298,7 +322,7 @@ LOGGING = {
 # GeoJSON response cache duration (seconds)
 # - Development: 60 (1 minute)
 # - Production: 120-180 (2-3 minutes)
-GEOJSON_CACHE_DURATION = int(os.environ.get('GEOJSON_CACHE_DURATION', 60))
+GEOJSON_CACHE_DURATION = int(os.environ.get('GEOJSON_CACHE_DURATION', 120))
 
 # =============================================================================
 # RATE LIMITING CONFIGURATION
