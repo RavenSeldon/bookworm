@@ -44,3 +44,6 @@ coverage.xml
 .venv/
 venv/
 ENV/
+
+# .md files
+DEPLOYMENT_ROADMAP.md
