@@ -1,0 +1,1 @@
+# Procfile intentionally empty — startup handled by Dockerfile ENTRYPOINT (start.sh)
