@@ -257,6 +257,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if platform.system() == 'Darwin':  # macOS
     GDAL_LIBRARY_PATH = '/opt/homebrew/opt/gdal/lib/libgdal.dylib'
     GEOS_LIBRARY_PATH = '/opt/homebrew/opt/geos/lib/libgeos_c.dylib'
+else:
+    # Linux (Railway/Nixpacks) — use env vars if auto-detection fails
+    _gdal = os.environ.get('GDAL_LIBRARY_PATH')
+    _geos = os.environ.get('GEOS_LIBRARY_PATH')
+    if _gdal:
+        GDAL_LIBRARY_PATH = _gdal
+    if _geos:
+        GEOS_LIBRARY_PATH = _geos
 
 
 # =============================================================================
