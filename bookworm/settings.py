@@ -258,30 +258,12 @@ if platform.system() == 'Darwin':  # macOS (Homebrew)
     GDAL_LIBRARY_PATH = '/opt/homebrew/opt/gdal/lib/libgdal.dylib'
     GEOS_LIBRARY_PATH = '/opt/homebrew/opt/geos/lib/libgeos_c.dylib'
 else:
-    # Linux (Railway/Nixpacks) — search Nix store and standard paths
-    import glob
-
-    def _find_lib(*patterns):
-        for pattern in patterns:
-            matches = glob.glob(pattern)
-            if matches:
-                return matches[0]
-        return None
-
-    _gdal = os.environ.get('GDAL_LIBRARY_PATH') or _find_lib(
-        '/nix/store/*/lib/libgdal.so',
-        '/usr/lib/x86_64-linux-gnu/libgdal.so*',
-        '/usr/lib/libgdal.so*',
-    )
-    _geos = os.environ.get('GEOS_LIBRARY_PATH') or _find_lib(
-        '/nix/store/*/lib/libgeos_c.so',
-        '/usr/lib/x86_64-linux-gnu/libgeos_c.so*',
-        '/usr/lib/libgeos_c.so*',
-    )
-    if _gdal:
-        GDAL_LIBRARY_PATH = _gdal
-    if _geos:
-        GEOS_LIBRARY_PATH = _geos
+    # Linux (Docker/Railway) — apt-get installs to standard paths,
+    # Django auto-detects. Env var override available as fallback.
+    if os.environ.get('GDAL_LIBRARY_PATH'):
+        GDAL_LIBRARY_PATH = os.environ['GDAL_LIBRARY_PATH']
+    if os.environ.get('GEOS_LIBRARY_PATH'):
+        GEOS_LIBRARY_PATH = os.environ['GEOS_LIBRARY_PATH']
 
 
 # =============================================================================
