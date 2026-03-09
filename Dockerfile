@@ -21,3 +21,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+
+# Railway sets PORT dynamically; env vars available at runtime only
+CMD python manage.py migrate \
+    && python manage.py createcachetable 2>/dev/null; \
+    python manage.py collectstatic --noinput; \
+    exec gunicorn bookworm.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 120

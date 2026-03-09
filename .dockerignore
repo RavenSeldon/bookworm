@@ -1,0 +1,12 @@
+.env
+.env.*
+.git
+.gitignore
+.pytest_cache
+__pycache__
+staticfiles
+media
+*.pyc
+.DS_Store
+DEPLOYMENT_ROADMAP.md
+scripts/
