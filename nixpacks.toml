@@ -6,8 +6,7 @@
 # =============================================================================
 
 [phases.setup]
-nixPkgs = ["gdal", "geos", "proj"]
-nixLibs = ["gdal", "geos", "proj"]
+aptPkgs = ["gdal-bin", "libgdal-dev", "libgeos-dev", "libproj-dev"]
 
 [phases.build]
 cmds = ["pip install -r requirements.txt"]
