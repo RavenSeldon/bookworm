@@ -26,6 +26,9 @@ python-dotenv>=1.0
 # HTTP requests (Nominatim geocoding)
 requests>=2.31
 
+# Image processing (Django ImageField validation)
+Pillow>=10.0
+
 # Structured JSON logging (production)
 python-json-logger>=2.0
 
