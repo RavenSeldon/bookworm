@@ -209,13 +209,15 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Cloudinary configuration
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')
+# django-cloudinary-storage reads CLOUDINARY_URL automatically when
+# CLOUDINARY_STORAGE values are empty. We explicitly configure cloudinary
+# from the URL to ensure both the base library and django-cloudinary-storage
+# are properly initialized.
+import cloudinary
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
-}
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')
+if CLOUDINARY_URL:
+    cloudinary.config(cloudinary_url=CLOUDINARY_URL)
 
 
 # =============================================================================
