@@ -61,6 +61,19 @@ class Library(models.Model):
         help_text="Auto-updated when a new Shelfie is added"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    merged_into = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="merged_from",
+        help_text=(
+            "If this library was a duplicate that was merged into another, "
+            "this points at the surviving record. Set by admin via the "
+            "DuplicateCandidate merge action; combined with is_active=False "
+            "this row becomes a tombstone preserving audit history."
+        ),
+    )
 
     class Meta:
         verbose_name_plural = "Libraries"
@@ -253,3 +266,256 @@ class IssueReport(models.Model):
     def report_type(self):
         """Returns 'photo' or 'library' based on what's being reported."""
         return 'photo' if self.shelfie else 'library'
+
+
+class StewardPartnership(models.Model):
+    """
+    A Little Free Library steward's response to the Bookworm consent ask.
+
+    Stewards receive a hand-delivered envelope with an info sheet + consent
+    card. They can respond by scanning the QR on the card to open this form,
+    or emailing the project lead. This model captures the digital and the
+    manually-transcribed (by admin) responses.
+
+    Note: stewards may submit before their library has been added to Bookworm,
+    so `library` is nullable. Admin matches the consent to a Library record
+    later via the admin "match" action.
+    """
+
+    HUNT_INTEREST_YES = "yes"
+    HUNT_INTEREST_TELL_ME_MORE = "tell_me_more"
+    HUNT_INTEREST_NO = "no"
+    HUNT_INTEREST_CHOICES = [
+        (HUNT_INTEREST_YES, "Yes — count me in as a host stop"),
+        (HUNT_INTEREST_TELL_ME_MORE, "Tell me more before I decide"),
+        (HUNT_INTEREST_NO, "Not interested in the Hunt"),
+    ]
+
+    # What the steward tells us
+    library_address = models.CharField(
+        max_length=300,
+        help_text="Address or descriptive location of the steward's library.",
+    )
+    name = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Steward's name (optional).",
+    )
+    contact = models.CharField(
+        max_length=200,
+        help_text="Email or phone number — we keep it private and use it only "
+                  "to coordinate the sticker placement and the Library Hunt.",
+    )
+    sticker_interest = models.BooleanField(
+        default=False,
+        help_text="Did the steward partner and ask for a Bookworm QR sticker on their library?",
+    )
+    hunt_interest = models.CharField(
+        max_length=20,
+        choices=HUNT_INTEREST_CHOICES,
+        default=HUNT_INTEREST_NO,
+    )
+    hunt_message = models.CharField(
+        max_length=140,
+        blank=True,
+        help_text="Optional one-line message the steward wants visitors to see "
+                  "during the Library Hunt.",
+    )
+
+    # Admin workflow
+    library = models.ForeignKey(
+        "Library",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="steward_partnerships",
+        help_text="Matched library record. Populated by admin after review.",
+    )
+    is_processed = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Marks this consent as actioned (sticker placed, hunt follow-up sent, etc.).",
+    )
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Internal notes — not visible to the steward.",
+    )
+
+    submitted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        verbose_name = "Steward Partnership"
+        verbose_name_plural = "Steward Partnerships"
+        indexes = [
+            models.Index(fields=["is_processed", "-submitted_at"]),
+        ]
+
+    def __str__(self):
+        bits = [self.library_address[:60]]
+        if self.name:
+            bits.append(f"({self.name})")
+        return " ".join(bits)
+
+    @property
+    def hunt_interest_display_short(self):
+        """Concise label for admin list_display."""
+        return {
+            self.HUNT_INTEREST_YES: "Yes",
+            self.HUNT_INTEREST_TELL_ME_MORE: "Tell me more",
+            self.HUNT_INTEREST_NO: "No",
+        }.get(self.hunt_interest, "—")
+
+
+class ScanEvent(models.Model):
+    """
+    A single QR-sticker scan, recorded for analytics.
+      - tune the picker thresholds based on real distance distributions
+      - find missing libraries (zero-match scans cluster around real LFLs)
+      - measure the funnel — scans → matched library → shelfie added
+
+    Privacy: no IP, no user agent. Coordinates are rounded to 4 decimals
+    (~11m precision) before storage. Enough for cluster analysis, not enough
+    to retrace an individual user's path.
+    """
+
+    OUTCOME_MATCHED = "matched"
+    OUTCOME_PICKER_SHOWN = "picker_shown"
+    OUTCOME_PICKER_RESOLVED = "picker_resolved"
+    OUTCOME_NO_MATCH = "no_match"
+    OUTCOME_DENIED = "denied"
+    OUTCOME_ERROR = "error"
+    OUTCOME_CHOICES = [
+        (OUTCOME_MATCHED, "Matched directly"),
+        (OUTCOME_PICKER_SHOWN, "Picker shown for ambiguous match"),
+        (OUTCOME_PICKER_RESOLVED, "Picker resolved to library"),
+        (OUTCOME_NO_MATCH, "No library within range"),
+        (OUTCOME_DENIED, "Geolocation denied by user"),
+        (OUTCOME_ERROR, "Geolocation error or timeout"),
+    ]
+
+    outcome = models.CharField(
+        max_length=20,
+        choices=OUTCOME_CHOICES,
+        db_index=True,
+    )
+    matched_library = models.ForeignKey(
+        "Library",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="scan_events",
+    )
+    candidate_count = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Number of libraries within the picker radius at scan time.",
+    )
+
+    # Approximate location — rounded to 4 decimal places (~11m) for privacy.
+    # See _round_point() in views.
+    location = models.PointField(
+        srid=4326,
+        null=True,
+        blank=True,
+        help_text="Approximate scan location, rounded to ~11m precision.",
+    )
+    accuracy_meters = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Browser-reported geolocation accuracy in meters.",
+    )
+
+    occurred_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-occurred_at"]
+        verbose_name = "Scan event"
+        verbose_name_plural = "Scan events"
+        indexes = [
+            models.Index(fields=["outcome", "-occurred_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_outcome_display()} @ {self.occurred_at:%Y-%m-%d %H:%M}"
+
+
+class DuplicateCandidate(models.Model):
+    """
+    Records a spatial proximity match between a newly-submitted Library and
+    an existing one. Created at submission time when a new library lands
+    within ``DUPLICATE_PROXIMITY_RADIUS_M`` of an existing active library.
+
+    Never blocks the submission. The submitter sees the standard success
+    page; admin gains a review surface to decide whether the new submission
+    is genuinely new, a duplicate to merge, or junk to reject.
+
+    Storage rationale (vs putting a single FK on Library):
+      - One submission can produce multiple candidates (apartment-complex
+        case where 2-3 existing libraries cluster within radius).
+      - Disposition history persists past resolution — useful for tuning
+        the proximity threshold once we have data.
+      - The candidate row is identity-agnostic by design: it records the
+        spatial relationship, not who submitted. The future trust-tier
+        system can layer on top without schema churn.
+    """
+
+    PENDING = "pending"
+    APPROVED_NEW = "approved_new"
+    MERGED = "merged"
+    REJECTED = "rejected"
+    DISPOSITION_CHOICES = [
+        (PENDING, "Pending review"),
+        (APPROVED_NEW, "Approved as new library"),
+        (MERGED, "Merged into existing"),
+        (REJECTED, "Rejected as junk"),
+    ]
+
+    submitted_library = models.ForeignKey(
+        "Library",
+        on_delete=models.CASCADE,
+        related_name="duplicate_candidates",
+        help_text="The newly-submitted library that triggered the flag.",
+    )
+    existing_library = models.ForeignKey(
+        "Library",
+        on_delete=models.CASCADE,
+        related_name="duplicate_matches",
+        help_text="The existing library that the submission is suspected of duplicating.",
+    )
+    distance_meters = models.PositiveSmallIntegerField(
+        help_text="Distance between the two libraries at submission time, in metres.",
+    )
+    disposition = models.CharField(
+        max_length=20,
+        choices=DISPOSITION_CHOICES,
+        default=PENDING,
+        db_index=True,
+    )
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Internal notes from the admin who reviewed this candidate.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set when the disposition leaves PENDING.",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Duplicate candidate"
+        verbose_name_plural = "Duplicate candidates"
+        indexes = [
+            models.Index(fields=["disposition", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"#{self.submitted_library_id} ~ #{self.existing_library_id} "
+            f"({self.distance_meters}m, {self.get_disposition_display()})"
+        )
+
+    @property
+    def is_pending(self):
+        return self.disposition == self.PENDING

@@ -1219,9 +1219,26 @@
         let submitLocationPicker = null;
         let submitLocationMarker = null;
 
+        // =================================================================
+        // HTMX afterSwap handlers
+        // Two responsibilities, kept in one listener so we don't end up
+        // with multiple bound handlers racing each other:
+        //   1. Initialize the location picker after the submit form swaps in.
+        //   2. Show a success toast + refresh markers after a successful POST.
+        // =================================================================
         document.body.addEventListener('htmx:afterSwap', function(event) {
+            // Submit form just landed in the offcanvas — wire up the picker.
             if (event.detail.target.id === 'submit-form-container') {
                 setTimeout(initLocationPicker, 100);
+            }
+
+            // Successful submission — toast it and refresh markers. Do NOT
+            // auto-close the offcanvas; the user reads the success card at
+            // their own pace, and the toast already provides feedback.
+            const successEl = event.detail.target.querySelector('.submission-success');
+            if (successEl) {
+                showToast(successEl.dataset.message || 'Success!', 'success');
+                setTimeout(loadLibraries, 500);
             }
         });
 
@@ -1412,25 +1429,8 @@
             }
         });
 
-        // =================================================================
-        // HTMX Event Handlers (Map-specific: refresh markers + close offcanvas)
-        // =================================================================
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            const successEl = event.detail.target.querySelector('.submission-success');
-            if (successEl) {
-                showToast(successEl.dataset.message || 'Success!', 'success');
-
-                setTimeout(loadLibraries, 500);
-
-                setTimeout(() => {
-                    const offcanvasElements = document.querySelectorAll('.offcanvas.show');
-                    offcanvasElements.forEach(el => {
-                        const offcanvas = bootstrap.Offcanvas.getInstance(el);
-                        if (offcanvas) offcanvas.hide();
-                    });
-                }, 20000);
-            }
-        });
+        // (afterSwap success/refresh handling now lives in the merged
+        // listener above. This block intentionally left blank.)
 
         // =================================================================
         // Debounced Map Refresh
@@ -1455,6 +1455,29 @@
         // =================================================================
         loadLibraries();
         setInterval(loadLibraries, 5 * 60 * 1000);
+
+        // =================================================================
+        // Deep-link: ?submit=1 auto-opens the submit offcanvas.
+        // Used by /submit/ direct visits and the /here/ no-match flow.
+        // =================================================================
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('submit') === '1') {
+                const el = document.getElementById('submitOffcanvas');
+                if (el) {
+                    bootstrap.Offcanvas.getOrCreateInstance(el).show();
+                    // Clean the URL so reloads/bookmarks don't keep re-opening
+                    // the panel. The history entry itself stays.
+                    params.delete('submit');
+                    const cleanQs = params.toString();
+                    const cleanUrl = window.location.pathname +
+                        (cleanQs ? '?' + cleanQs : '') +
+                        window.location.hash;
+                    window.history.replaceState({}, '', cleanUrl);
+                }
+            }
+        })();
+
     </script>
     <script src="{% static 'libraries/js/phase1-enhancements.js' %}"></script>
 </body>

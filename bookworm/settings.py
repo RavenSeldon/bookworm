@@ -337,18 +337,55 @@ GEOJSON_CACHE_DURATION = int(os.environ.get('GEOJSON_CACHE_DURATION', 120))
 # RATE LIMITING CONFIGURATION
 # =============================================================================
 
+# Per-key 'escalates' flag:
+#   - Default True (omitted): repeat offenders get progressively longer
+#     timeouts via RATE_LIMIT_ESCALATION_TIERS. Right answer for write
+#     endpoints (library_submit, shelfie_upload, etc).
+#   - Set False for high-burst endpoints where a single user legitimately
+#     hits the limit during normal use — escalation here would lock honest
+#     users out of their stickers during the Library Hunt.
 RATE_LIMIT_SETTINGS = {
-    'library_submit': {'limit': 5, 'period': 3600},      # 5 per hour
-    'shelfie_upload': {'limit': 10, 'period': 3600},     # 10 per hour
-    'issue_report': {'limit': 5, 'period': 3600},        # 5 per hour
-    'geocode_search': {'limit': 30, 'period': 60},       # 30 per minute
+    'library_submit':      {'limit': 50, 'period': 600},                       # 50 per 10 min
+    'shelfie_upload':      {'limit': 50, 'period': 1800},                      # 50 per 30 min
+    'issue_report':        {'limit': 10, 'period': 3600},                      # 10 per hour
+    'geocode_search':      {'limit': 30, 'period': 60},                        # 30 per minute
+    'steward_partnership': {'limit': 5,  'period': 3600},                      # 5 per hour
+    'here_resolve':        {'limit': 20, 'period': 300, 'escalates': False},   # 20 per 5 min
+    'here_log':            {'limit': 20, 'period': 300, 'escalates': False},   # 20 per 5 min
 }
+
+# Progressive rate-limit escalation:
+#   tier 1 = 1× base period (first offense)
+#   tier 2 = 3×
+#   tier 3 = 6×
+#   tier 4+ = cap at 6×
+# So library_submit (period=600s) escalates 10min → 30min → 60min → 60min.
+# Read at runtime by libraries.rate_limiting; safe to tune without restart.
+RATE_LIMIT_ESCALATION_TIERS = [1, 3, 6, 6]
+
+# How long an offender's tier persists after their last offense. After this
+# many seconds with no further blocks, their next offense resets to tier 1.
+RATE_LIMIT_OFFENSE_WINDOW_S = 86400  # 24 hours
 
 # Anti-bot timing (minimum seconds before form can be submitted)
 MIN_SUBMISSION_TIME_SECONDS = 2
 
 # Upload validation (for client-side checks)
 MAX_UPLOAD_SIZE_MB = 10
+
+# =============================================================================
+# DUPLICATE FLAGGING (Phase 3)
+# =============================================================================
+# When a new library is submitted, flag it for admin review if any active
+# library already exists within this radius. Never blocks the submission.
+# 20m comfortably distinguishes adjacent residential LFLs (typically >50m
+# apart) from honest self-resubmits, while staying inside typical browser
+# geolocation accuracy (10–50m).
+DUPLICATE_PROXIMITY_RADIUS_M = 20
+
+# Cap candidates per submission. Apartment-complex courtyards can have
+# 3+ existing libraries within radius; admin only needs the closest few.
+DUPLICATE_CANDIDATE_MAX = 3
 
 # =============================================================================
 # SECURITY SETTINGS

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're at a Little Free Library — Bookworm</title>
+
+    <meta name="description" content="Welcome to a Little Free Library, mapped on Bookworm. Find what's on the shelf right now.">
+    <meta name="theme-color" content="#1a5f4a">
+
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* All page-specific styles live here, including styles consumed by
+           HTMX-loaded partials (here_picker, here_no_match). Following the
+           codebase rule: partials stay style/script-free; the consuming
+           top-level template owns presentation. */
+
+        body {
+            background: linear-gradient(180deg, var(--color-primary-50) 0%, var(--color-neutral-50) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            margin: 0;
+        }
+        .here-page {
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        .here-brand { margin-bottom: 2rem; }
+        .here-brand img { height: 48px; width: auto; }
+        .here-brand-fallback {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: var(--color-primary-800);
+        }
+        .here-headline {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            line-height: 1.2;
+            color: var(--color-primary-800);
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .here-sub {
+            color: var(--color-neutral-700);
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+        .here-action { margin: 2rem 0; }
+        .btn-here-primary {
+            background: var(--color-primary-800);
+            color: white;
+            font-family: var(--font-body);
+            font-size: 1.15rem;
+            font-weight: 500;
+            padding: 1rem 2.25rem;
+            border-radius: var(--radius-md);
+            border: none;
+            transition: var(--transition-base);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .btn-here-primary:hover:not(:disabled) {
+            background: var(--color-primary-900);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+        .btn-here-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-here-ghost {
+            color: var(--color-primary-800);
+            background: transparent;
+            font-family: var(--font-body);
+            font-size: 1rem;
+            padding: 0.6rem 1.25rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-primary-800);
+            text-decoration: none;
+            transition: var(--transition-base);
+            display: inline-block;
+        }
+        .btn-here-ghost:hover { background: var(--color-primary-50); }
+        .btn-here-primary:focus-visible,
+        .btn-here-ghost:focus-visible {
+            outline: 2px solid var(--color-accent-400);
+            outline-offset: 2px;
+        }
+        .here-spinner {
+            display: none;
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: here-spin 0.7s linear infinite;
+        }
+        .btn-here-primary.is-loading .here-spinner { display: inline-block; }
+        @keyframes here-spin { to { transform: rotate(360deg); } }
+
+        #here-result { margin-top: 2rem; }
+
+        /* Result card — used by both picker and no-match partials. */
+        .here-result-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 1.75rem;
+            text-align: left;
+        }
+        .here-result-card h2 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--color-primary-800);
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+        .here-result-card p {
+            color: var(--color-neutral-700);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        /* Picker partial classes. */
+        .picker-list {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .picker-link {
+            display: block;
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-neutral-200);
+            background: var(--color-neutral-50);
+            transition: var(--transition-base);
+            color: var(--color-neutral-900);
+        }
+        .picker-link:hover {
+            border-color: var(--color-primary-800);
+            background: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+        .picker-name { font-weight: 500; margin-bottom: 0.25rem; }
+        .picker-name-empty { font-style: italic; color: var(--color-neutral-700); }
+        .picker-desc {
+            font-size: 0.875rem;
+            color: var(--color-neutral-700);
+            line-height: 1.4;
+            margin-bottom: 0.4rem;
+        }
+        .picker-distance { font-size: 0.825rem; color: var(--color-neutral-600); }
+        .picker-fallback { margin-top: 1.25rem; text-align: center; }
+        .picker-fallback a {
+            color: var(--color-primary-800);
+            font-size: 0.9rem;
+            text-decoration: none;
+            border-bottom: 1px dotted var(--color-primary-800);
+        }
+
+        /* No-match partial classes. */
+        .no-match-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        /* JS-rendered error UI. */
+        .here-error {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 1.75rem;
+            text-align: left;
+        }
+        .here-error h2 {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--color-neutral-900);
+            margin-bottom: 0.75rem;
+        }
+        .here-error p {
+            color: var(--color-neutral-700);
+            margin-bottom: 1rem;
+        }
+
+        .footer-note {
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            color: var(--color-neutral-600);
+            line-height: 1.5;
+            max-width: 480px;
+            text-align: center;
+        }
+        .what-is { margin-top: 1.5rem; }
+        .what-is summary {
+            color: var(--color-primary-800);
+            font-size: 0.95rem;
+            cursor: pointer;
+            list-style: none;
+        }
+        .what-is summary::-webkit-details-marker { display: none; }
+        .what-is[open] summary::after { content: " ↑"; }
+        .what-is summary::after { content: " ↓"; }
+        .what-is .what-is-body {
+            margin-top: 0.75rem;
+            color: var(--color-neutral-700);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <main class="here-page">
+        <div class="here-brand">
+            <span class="here-brand-fallback">Bookworm</span>
+        </div>
+
+        <h1 class="here-headline">Welcome to a Little Free Library.</h1>
+        <p class="here-sub">
+            Tap below and we'll find the one you're at — so you can see
+            what's on the shelf, leave a note, or wander to the next.
+        </p>
+
+        <div class="here-action">
+            <button id="here-locate-btn"
+                    class="btn-here-primary"
+                    type="button"
+                    aria-describedby="here-result">
+                <span class="btn-label">Find my library</span>
+                <span class="here-spinner" aria-hidden="true"></span>
+            </button>
+        </div>
+
+        {# Result container — HTMX swaps server responses here. #}
+        <div id="here-result" aria-live="polite" aria-atomic="true"></div>
+
+        <details class="what-is">
+            <summary>What is Bookworm?</summary>
+            <div class="what-is-body">
+                <p>
+                    Bookworm is a free community map of every Little Free
+                    Library in British Columbia. Stewards opt in; readers
+                    can find them, see what's on the shelves, and add their
+                    own photos. No accounts, no ads, no tracking.
+                </p>
+                <p>
+                    <a href="{% url 'libraries:map' %}">Open the map →</a>
+                </p>
+            </div>
+        </details>
+    </main>
+
+    <p class="footer-note">
+        Funded by a Neighbourhood Small Grant through the Vancouver Foundation,
+        administered by Mount Pleasant and Little Mountain Neighbourhood Houses.
+    </p>
+
+    {# CSRF token holder — used by HTMX and the fire-and-forget log POST. #}
+    <form id="csrf-form" style="display:none">
+        {% csrf_token %}
+    </form>
+
+    <script>
+        (function () {
+            const btn = document.getElementById('here-locate-btn');
+            const resultEl = document.getElementById('here-result');
+            const csrfToken = document.querySelector('#csrf-form [name=csrfmiddlewaretoken]').value;
+
+            const RESOLVE_URL = "{% url 'libraries:here_resolve' %}";
+            const LOG_URL = "{% url 'libraries:here_log' %}";
+            const MAP_URL = "{% url 'libraries:map' %}";
+
+            // Allow HTMX to swap on 4xx responses (we render a no-match
+            // partial on a 400). Same pattern as phase1-enhancements.js
+            // uses on /map/, scoped here to this page.
+            document.body.addEventListener('htmx:beforeSwap', function (evt) {
+                const allowed = [200, 400, 422];
+                if (allowed.indexOf(evt.detail.xhr.status) !== -1) {
+                    evt.detail.shouldSwap = true;
+                    evt.detail.isError = false;
+                }
+            });
+
+            function setLoading(loading) {
+                btn.classList.toggle('is-loading', loading);
+                btn.disabled = loading;
+                btn.querySelector('.btn-label').textContent =
+                    loading ? 'Finding…' : 'Find my library';
+            }
+
+            function showError(title, body) {
+                // Build with textContent to avoid HTML-injection risk.
+                resultEl.innerHTML = '';
+                const wrap = document.createElement('div');
+                wrap.className = 'here-error';
+                wrap.setAttribute('role', 'alert');
+
+                const h = document.createElement('h2');
+                h.textContent = title;
+                wrap.appendChild(h);
+
+                const p = document.createElement('p');
+                p.textContent = body;
+                wrap.appendChild(p);
+
+                const a = document.createElement('a');
+                a.href = MAP_URL;
+                a.className = 'btn-here-ghost';
+                a.textContent = 'Open the map';
+                wrap.appendChild(a);
+
+                resultEl.appendChild(wrap);
+            }
+
+            function logOutcome(outcome) {
+                // Fire-and-forget — never block UI on this.
+                try {
+                    fetch(LOG_URL, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'outcome=' + encodeURIComponent(outcome),
+                        keepalive: true,
+                    });
+                } catch (_) { /* swallow */ }
+            }
+
+            function onCoords(position) {
+                const { latitude, longitude, accuracy } = position.coords;
+                htmx.ajax('POST', RESOLVE_URL, {
+                    target: '#here-result',
+                    swap: 'innerHTML',
+                    values: {
+                        lat: latitude,
+                        lng: longitude,
+                        accuracy: accuracy || '',
+                    },
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                    },
+                }).then(function () {
+                    setLoading(false);
+                }).catch(function () {
+                    setLoading(false);
+                    showError(
+                        "We couldn't reach the server.",
+                        "Check your connection and try again."
+                    );
+                });
+            }
+
+            function onLocateError(err) {
+                setLoading(false);
+                if (err && err.code === err.PERMISSION_DENIED) {
+                    logOutcome('denied');
+                    showError(
+                        "Location access was blocked.",
+                        "Bookworm uses your location only to find the library you're standing at — nothing is saved or tracked. You can still browse the full map below."
+                    );
+                } else {
+                    logOutcome('error');
+                    showError(
+                        "We couldn't pinpoint your location.",
+                        "GPS sometimes struggles in dense areas or indoors. Try again, or open the map and tap the library you're at."
+                    );
+                }
+            }
+
+            btn.addEventListener('click', function () {
+                if (!navigator.geolocation) {
+                    logOutcome('error');
+                    showError(
+                        "Your browser doesn't support location.",
+                        "You can still find this library on the map."
+                    );
+                    return;
+                }
+                setLoading(true);
+                navigator.geolocation.getCurrentPosition(
+                    onCoords,
+                    onLocateError,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 12000,
+                        maximumAge: 30000,
+                    }
+                );
+            });
+        })();
+    </script>
+</body>
+</html>

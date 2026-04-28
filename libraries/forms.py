@@ -9,7 +9,7 @@ Bookworm: Little Library Finder - Forms
 from django import forms
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
-from .models import Library, Shelfie, IssueReport
+from .models import Library, Shelfie, IssueReport, StewardPartnership
 
 
 class HoneypotMixin:
@@ -222,3 +222,110 @@ class IssueReportForm(HoneypotMixin, forms.ModelForm):
         if commit:
             report.save()
         return report
+
+
+class StewardPartnershipForm(HoneypotMixin, forms.ModelForm):
+    """
+    Steward-facing partnership form linked from the consent card and emailable.
+
+    Mirrors the paper card exactly so a steward switching channels mid-flow
+    isn't surprised by extra fields.
+    """
+
+    class Meta:
+        model = StewardPartnership
+        fields = [
+            "library_address",
+            "name",
+            "contact",
+            "sticker_interest",
+            "hunt_interest",
+            "hunt_message",
+        ]
+        widgets = {
+            "library_address": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "e.g. front lawn of 1234 Main St",
+                    "autocomplete": "off",
+                    "required": True,
+                }
+            ),
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Optional",
+                    "autocomplete": "name",
+                }
+            ),
+            "contact": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Email or phone — we'll only use it to coordinate",
+                    "autocomplete": "email",
+                    "required": True,
+                }
+            ),
+            "sticker_interest": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "hunt_interest": forms.RadioSelect(),
+            "hunt_message": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": (
+                        "Optional one-line message for Library Hunt visitors"
+                    ),
+                    "maxlength": "140",
+                }
+            ),
+        }
+        labels = {
+            "library_address": "Where is your Little Free Library?",
+            "name": "Your name",
+            "contact": "How can we reach you?",
+            "sticker_interest": (
+                "Yes, I'd like a Bookworm QR sticker on my library."
+            ),
+            "hunt_interest": "The Library Hunt — Saturday, August 15, 2026",
+            "hunt_message": "A note for visitors (optional)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Required-field markers
+        self.fields["library_address"].required = True
+        self.fields["contact"].required = True
+        # Optional fields explicitly marked
+        self.fields["name"].required = False
+        self.fields["hunt_message"].required = False
+        # Match the codebase: every form gets the honeypot wired up via the mixin
+
+    def clean_contact(self):
+        contact = (self.cleaned_data.get("contact") or "").strip()
+        if not contact:
+            raise forms.ValidationError(
+                "Please share an email or phone number so we can follow up."
+            )
+        return contact
+
+    def clean(self):
+        cleaned = super().clean()
+        # If the steward says no to both stickers AND the Hunt, the submission
+        # is technically valid but we want to nudge them — they probably hit
+        # the wrong button. We don't block; we just leave a soft hint via a
+        # non-field error so the view can surface it gently.
+        sticker = cleaned.get("sticker_interest")
+        hunt = cleaned.get("hunt_interest")
+        if not sticker and hunt == StewardPartnership.HUNT_INTEREST_NO:
+            self.add_error(
+                None,
+                forms.ValidationError(
+                    "It looks like you've declined both the sticker and the "
+                    "Library Hunt. If that's intentional, no need to send this "
+                    "form — leaving us with no response works as a polite no. "
+                    "If you meant to opt in to one of them, please tick the box.",
+                    code="empty_consent",
+                ),
+            )
+        return cleaned

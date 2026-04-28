@@ -1,0 +1,47 @@
+{% comment %}
+Picker partial — rendered when the resolver finds 2+ candidates within 100m
+or a single candidate just outside the 25m direct-match radius.
+
+Loaded into #here-result via HTMX from /here/resolve/. All visual styling
+comes from classes defined in here.html — partials stay style/script-free
+per the codebase convention.
+
+Context:
+  candidates — list of Library objects with `.distance` annotation (a
+               GeoDjango Distance object; `.distance.m` is metres).
+{% endcomment %}
+
+<div class="here-result-card">
+    <h2>Which library are you at?</h2>
+    <p>We found a few nearby — tap the one in front of you.</p>
+
+    <ul class="picker-list">
+        {% for library in candidates %}
+            <li>
+                <a href="{{ library.get_absolute_url }}" class="picker-link">
+                    <div class="picker-name">
+                        {% if library.name %}
+                            {{ library.name }}
+                        {% else %}
+                            <span class="picker-name-empty">Unnamed library</span>
+                        {% endif %}
+                    </div>
+                    {% if library.description %}
+                        <div class="picker-desc">
+                            {{ library.description|truncatechars:80 }}
+                        </div>
+                    {% endif %}
+                    <div class="picker-distance">
+                        {{ library.distance.m|floatformat:0 }} m away
+                    </div>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <div class="picker-fallback">
+        <a href="{% url 'libraries:map' %}">
+            None of these — open the full map
+        </a>
+    </div>
+</div>

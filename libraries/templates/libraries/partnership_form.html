@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add your library to Bookworm — Steward Partnership</title>
+
+    <meta name="description" content="Help us include your Little Free Library in Bookworm — a free community map of LFLs across British Columbia.">
+    <meta name="robots" content="noindex">  {# steward-facing form, no search indexing #}
+    <meta name="theme-color" content="#1a5f4a">
+
+    {# Open Graph — for the rare case a steward shares the link #}
+    <meta property="og:title" content="Add your Little Free Library to Bookworm">
+    <meta property="og:description" content="A short consent form for Little Free Library stewards in Central Vancouver.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bookworm.guide/partners/">
+
+    {# Bootstrap 5, Google Fonts, shared design system #}
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <style>
+        /* Page-specific layout — scoped to .partnership-page so we don't pollute. */
+        .partnership-page {
+            background: var(--color-neutral-50);
+            min-height: 100vh;
+            padding: 2rem 1rem 4rem;
+        }
+        .partnership-card {
+            max-width: 640px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 2.5rem;
+        }
+        @media (max-width: 575px) {
+            .partnership-card {
+                padding: 1.5rem;
+                border-radius: var(--radius-md);
+            }
+        }
+        .partnership-page .lead-line {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            line-height: 1.2;
+            color: var(--color-primary-800);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .partnership-page .sub-line {
+            color: var(--color-neutral-700);
+            margin-bottom: 2rem;
+        }
+        .partnership-page .form-section {
+            margin-bottom: 1.75rem;
+        }
+        .partnership-page label {
+            font-weight: 500;
+            color: var(--color-neutral-800);
+            margin-bottom: 0.4rem;
+        }
+        .partnership-page .helptext,
+        .partnership-page .form-text {
+            color: var(--color-neutral-600);
+            font-size: 0.875rem;
+        }
+        .partnership-page .hunt-block {
+            background: var(--color-accent-100);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--color-accent-600);
+        }
+        .partnership-page .hunt-block legend {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            color: var(--color-primary-800);
+            margin-bottom: 0.5rem;
+            float: none;
+            width: auto;
+            padding: 0;
+        }
+        .partnership-page .form-check {
+            margin-bottom: 0.5rem;
+        }
+        .partnership-page .btn-submit {
+            background: var(--color-primary-800);
+            color: white;
+            font-weight: 500;
+            padding: 0.75rem 2rem;
+            border-radius: var(--radius-md);
+            border: none;
+            transition: var(--transition-base);
+        }
+        .partnership-page .btn-submit:hover {
+            background: var(--color-primary-900);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        .partnership-page .footer-note {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.825rem;
+            color: var(--color-neutral-600);
+            line-height: 1.5;
+        }
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0;
+        }
+        .errorlist li {
+            color: var(--color-danger);
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+        .nonfield-errors {
+            background: var(--color-danger-bg);
+            color: var(--color-danger);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        .character-counter {
+            font-size: 0.825rem;
+            color: var(--color-neutral-600);
+            text-align: right;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body class="partnership-page">
+    <main class="partnership-card">
+        <p class="lead-line">A few questions, and we'll take it from there.</p>
+        <p class="sub-line">
+            Thanks for hosting a Little Free Library — and for considering
+            Bookworm. This form takes about a minute. If anything's unclear,
+            email <a href="mailto:ben@bookworm.guide">ben@bookworm.guide</a>.
+        </p>
+
+        {% if form.non_field_errors %}
+            <div class="nonfield-errors" role="alert">
+                {% for err in form.non_field_errors %}
+                    <div>{{ err }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="post" action="{% url 'libraries:partnership_submit' %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="_form_loaded_at" value="{{ form_loaded_at }}">
+
+            {# Honeypot — rendered by HoneypotMixin via {{ form.website_url }}. #}
+            {#   Wrap it for explicit invisibility. #}
+            <div class="hp-field" aria-hidden="true">
+                <label for="{{ form.website_url.id_for_label }}">Leave this field empty</label>
+                {{ form.website_url }}
+            </div>
+
+            <div class="form-section">
+                <label for="{{ form.library_address.id_for_label }}">
+                    {{ form.library_address.label }}
+                </label>
+                {{ form.library_address }}
+                <div class="form-text">
+                    Anything that helps us find it — an address, a cross-street,
+                    or "the green one on the corner of Heather and 16th."
+                </div>
+                {{ form.library_address.errors }}
+            </div>
+
+            <div class="form-section">
+                <label for="{{ form.name.id_for_label }}">
+                    {{ form.name.label }}
+                </label>
+                {{ form.name }}
+                <div class="form-text">How would you like us to refer to you?</div>
+                {{ form.name.errors }}
+            </div>
+
+            <div class="form-section">
+                <label for="{{ form.contact.id_for_label }}">
+                    {{ form.contact.label }}
+                </label>
+                {{ form.contact }}
+                <div class="form-text">
+                    Email or phone — we'll only use it to coordinate the
+                    sticker, and around the Library Hunt. Never shared, never
+                    published.
+                </div>
+                {{ form.contact.errors }}
+            </div>
+
+            <div class="form-section form-check">
+                {{ form.sticker_interest }}
+                <label for="{{ form.sticker_interest.id_for_label }}" class="form-check-label">
+                    {{ form.sticker_interest.label }}
+                </label>
+                {{ form.sticker_interest.errors }}
+            </div>
+
+            <fieldset class="hunt-block">
+                <legend>{{ form.hunt_interest.label }}</legend>
+                <p class="form-text mb-2">
+                    A free Saturday afternoon walk where neighbours discover
+                    Little Free Libraries together. Library stewards are
+                    invited as honoured host stops — entirely optional.
+                </p>
+                {{ form.hunt_interest }}
+                {{ form.hunt_interest.errors }}
+
+                <div class="form-section mt-3">
+                    <label for="{{ form.hunt_message.id_for_label }}">
+                        {{ form.hunt_message.label }}
+                    </label>
+                    {{ form.hunt_message }}
+                    <div class="character-counter">
+                        <span id="hunt-char-count">0</span> / 140
+                    </div>
+                    {{ form.hunt_message.errors }}
+                </div>
+            </fieldset>
+
+            <button type="submit" class="btn btn-submit">
+                Send my response
+            </button>
+        </form>
+
+        <p class="footer-note">
+            Bookworm is a free community project. This work is funded by a
+            Neighbourhood Small Grant through the Vancouver Foundation,
+            administered by Mount Pleasant and Little Mountain Neighbourhood
+            Houses.
+        </p>
+    </main>
+
+    <script>
+        // Live character counter for the Hunt message field.
+        (function () {
+            const field = document.getElementById('{{ form.hunt_message.id_for_label }}');
+            const counter = document.getElementById('hunt-char-count');
+            if (!field || !counter) return;
+            function update() {
+                counter.textContent = field.value.length;
+            }
+            field.addEventListener('input', update);
+            update();
+        })();
+    </script>
+</body>
+</html>

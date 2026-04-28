@@ -55,6 +55,13 @@ urlpatterns = [
         views.shelfie_report_form_partial,
         name="shelfie_report_form",
     ),
+    # Steward partners + /here/ QR funnel
+    path("partners/", views.partnership_form, name="partnership_form"),
+    path("partners/submit/", views.partnership_submit, name="partnership_submit"),
+    path("partners/thanks/", views.partnership_thanks, name="partnership_thanks"),
+    path("here/", views.here_landing, name="here_landing"),
+    path("here/resolve/", views.here_resolve, name="here_resolve"),
+    path("here/log/", views.here_log, name="here_log"),
     # robots.txt
     path("robots.txt", views.robots_txt, name="robots_txt"),
     # Health check

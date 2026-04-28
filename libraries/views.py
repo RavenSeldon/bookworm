@@ -17,12 +17,13 @@ import logging
 from datetime import timedelta
 
 import requests
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from django.contrib.gis.geos import Point, Polygon
 from django.contrib.gis.measure import D
 from django.contrib.gis.db.models.functions import Distance
+from django.urls import reverse
 from django.db.models import Count, Prefetch
 from django.utils import timezone
 from django.template.response import TemplateResponse
@@ -30,8 +31,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.core.cache import cache
 
-from .models import Library, Shelfie, IssueReport
-from .forms import LibrarySubmissionForm, ShelfieUploadForm, IssueReportForm
+from .models import Library, Shelfie, IssueReport, StewardPartnership, ScanEvent, DuplicateCandidate
+from .forms import LibrarySubmissionForm, ShelfieUploadForm, IssueReportForm, StewardPartnershipForm
 from .rate_limiting import rate_limit, check_submission_timing
 
 logger = logging.getLogger(__name__)
@@ -399,20 +400,27 @@ def library_detail_bare(request, pk):
 @require_GET
 def submit_library_form(request):
     """
-    Display the library submission form (no rate limiting).
+    Display the library submission form.
+
+    HTMX requests get the form partial (loaded into the map's offcanvas).
+    Direct browser visits to /submit/ get redirected to the map with
+    ?submit=1, which the map's init script reads to auto-open the
+    submit offcanvas. There is no standalone full-page submit template —
+    submission requires the embedded Leaflet location picker that lives
+    in map.html.
     """
-    form = LibrarySubmissionForm()
-    template = 'libraries/partials/submit_form.html'
     if not request.headers.get('HX-Request'):
-        template = 'libraries/submit_library.html'
-    return TemplateResponse(request, template, {
+        return redirect(reverse('libraries:map') + '?submit=1')
+
+    form = LibrarySubmissionForm()
+    return TemplateResponse(request, 'libraries/partials/submit_form.html', {
         'form': form,
-        'form_loaded_at': timezone.now().timestamp(),  # For bot detection
+        'form_loaded_at': timezone.now().timestamp(),
         'max_upload_size_mb': getattr(settings, 'MAX_UPLOAD_SIZE_MB', 10),
     })
 
 @require_POST
-@rate_limit('library_submit', limit=10, period=3600)
+@rate_limit('library_submit', limit=50, period=600)
 def submit_library(request):
     """
     Handle library submission (rate_limited).
@@ -445,6 +453,9 @@ def submit_library(request):
                 photo=form.cleaned_data['photo'],
                 book_highlights=form.cleaned_data.get('book_highlights', '')
             )
+
+            # Flag potential spatial duplicates for admin review (never blocks).
+            _flag_duplicates(library)
 
             logger.info(
                 "Library submitted",
@@ -497,10 +508,11 @@ def submit_library(request):
             return JsonResponse({'error': 'Server error. Please try again.'}, status=500)
 
     # Form invalid - return with errors
-    template = 'libraries/partials/submit_form.html'
     if not request.headers.get('HX-Request'):
-        template = 'libraries/submit_library.html'
-    return TemplateResponse(request, template, {
+        # Non-HTMX POST that failed validation — bounce to the map.
+        # The user will need to retry via the offcanvas.
+        return redirect(reverse('libraries:map') + '?submit=1')
+    return TemplateResponse(request, 'libraries/partials/submit_form.html', {
         'form': form,
         'form_loaded_at': timezone.now().timestamp(),
         'max_upload_size_mb': getattr(settings, 'MAX_UPLOAD_SIZE_MB', 10),
@@ -512,7 +524,7 @@ def submit_library(request):
 # =============================================================================
 
 @require_POST
-@rate_limit('shelfie_upload', limit=10, period=3600)
+@rate_limit('shelfie_upload', limit=50, period=1800)
 def upload_shelfie(request, library_pk):
     """
     Handle Shelfie uploads to existing libraries.
@@ -628,7 +640,7 @@ def upload_shelfie(request, library_pk):
 # =============================================================================
 
 @require_POST
-@rate_limit('issue_report', limit=5, period=3600)
+@rate_limit('issue_report', limit=10, period=3600)
 def report_issue(request, library_pk):
     """Handle issue reports for a library."""
     library = get_object_or_404(Library, pk=library_pk)
@@ -713,7 +725,7 @@ def shelfie_report_form_partial(request, shelfie_pk):
     )
 
 @require_POST
-@rate_limit('issue_report', limit=5, period=3600)
+@rate_limit('issue_report', limit=10, period=3600)
 def report_shelfie(request, shelfie_pk):
     """
     Handle reports for a specific shelfie photo (rate-limited).
@@ -813,6 +825,352 @@ def report_form_partial(request, library_pk):
             'form_loaded_at': timezone.now().timestamp(),
         }
     )
+
+
+# -----------------------------------------------------------------------------
+# Helpers
+# -----------------------------------------------------------------------------
+
+# Picker thresholds — adjust based on real scan distance distributions after
+# the first few weeks of stickers in the wild.
+HERE_DIRECT_MATCH_RADIUS_M = 25  # nearest within 25m → likely the right one
+HERE_PICKER_RADIUS_M = 100  # nothing past 100m is a plausible candidate
+HERE_DISAMBIGUATION_GAP_M = 50  # gap between #1 and #2 to call it "clear"
+HERE_PICKER_MAX_CANDIDATES = 3  # most candidates we'll show in the picker
+
+
+def _round_coord(value: float, places: int = 4) -> float:
+    """Round a coord to N decimal places. 4 ≈ 11m on the ground."""
+    return round(value, places)
+
+
+def _log_scan(
+        outcome: str,
+        *,
+        matched=None,
+        candidate_count: int = 0,
+        user_point=None,
+        accuracy=None,
+):
+    """
+    Persist a ScanEvent with rounded coords. Never raises — analytics
+    must not break the user flow.
+    """
+    try:
+        rounded = None
+        if user_point is not None:
+            rounded = Point(
+                _round_coord(user_point.x),
+                _round_coord(user_point.y),
+                srid=4326,
+            )
+        ScanEvent.objects.create(
+            outcome=outcome,
+            matched_library=matched,
+            candidate_count=candidate_count,
+            location=rounded,
+            accuracy_meters=accuracy,
+        )
+    except Exception as exc:  # pragma: no cover — analytics must not crash views
+        logger.warning(
+            "scan_event_log_failed",
+            extra={"outcome": outcome, "error": str(exc)},
+        )
+
+
+def _coerce_float(raw):
+    """POST values come as strings; return float or None."""
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+# -----------------------------------------------------------------------------
+# Duplicate flagging (Phase 3)
+# -----------------------------------------------------------------------------
+
+
+def _flag_duplicates(library):
+    """
+    On submission, flag the new library if any active existing library lies
+    within ``DUPLICATE_PROXIMITY_RADIUS_M``. Creates up to
+    ``DUPLICATE_CANDIDATE_MAX`` ``DuplicateCandidate`` rows, closest first.
+
+    Identity-agnostic by design — records the spatial relationship, not who
+    submitted. Wrapped in try/except so submission flow never breaks if the
+    spatial query fails for any reason. Never blocks the user.
+
+    The candidate set includes unverified-but-active libraries: the most
+    common duplicate scenario is a user submitting twice from the same
+    form-load, and both rows are unverified at that point.
+    """
+    try:
+        radius_m = getattr(settings, "DUPLICATE_PROXIMITY_RADIUS_M", 20)
+        max_candidates = getattr(settings, "DUPLICATE_CANDIDATE_MAX", 3)
+
+        nearby = list(
+            Library.objects.filter(
+                is_active=True,
+                location__distance_lte=(library.location, D(m=radius_m)),
+            )
+            .exclude(pk=library.pk)
+            .annotate(distance=Distance("location", library.location))
+            .order_by("distance")[:max_candidates]
+        )
+
+        for candidate in nearby:
+            DuplicateCandidate.objects.create(
+                submitted_library=library,
+                existing_library=candidate,
+                distance_meters=int(round(candidate.distance.m)),
+            )
+
+        if nearby:
+            logger.info(
+                "library_duplicate_flagged",
+                extra={
+                    "library_id": library.pk,
+                    "candidate_count": len(nearby),
+                    "closest_pk": nearby[0].pk,
+                    "closest_distance_m": int(round(nearby[0].distance.m)),
+                },
+            )
+    except Exception as exc:  # pragma: no cover — must never break submit
+        logger.warning(
+            "duplicate_flagging_failed",
+            extra={"library_id": library.pk, "error": str(exc)},
+        )
+
+# -----------------------------------------------------------------------------
+# Partnership flow (traditional GET form / POST submit / GET thanks)
+# -----------------------------------------------------------------------------
+
+
+@require_GET
+def partnership_form(request):
+    """GET /partners/ — render the steward consent form (full page)."""
+    form = StewardPartnershipForm()
+    return render(
+        request,
+        "libraries/partnership_form.html",
+        {
+            "form": form,
+            "form_loaded_at": timezone.now().timestamp(),
+        },
+    )
+
+
+@require_POST
+@rate_limit("steward_partnership", limit=5, period=3600)
+def partnership_submit(request):
+    """POST /partners/submit/ — process steward partnership submission."""
+    is_too_fast, timing_message = check_submission_timing(request)
+    if is_too_fast:
+        # Re-render the form page with the error attached.
+        form = StewardPartnershipForm(request.POST)
+        form.add_error(None, timing_message)
+        return render(
+            request,
+            "libraries/partnership_form.html",
+            {
+                "form": form,
+                "form_loaded_at": timezone.now().timestamp(),
+            },
+            status=400,
+        )
+
+    form = StewardPartnershipForm(request.POST)
+
+    # Belt-and-suspenders honeypot check (the mixin runs first, this catches
+    # any bot that bypassed validation somehow).
+    if request.POST.get("website_url"):
+        logger.warning(
+            "consent_honeypot_tripped",
+            extra={"path": request.path},
+        )
+        return HttpResponseBadRequest("Invalid submission.")
+
+    if not form.is_valid():
+        return render(
+            request,
+            "libraries/partnership_form.html",
+            {
+                "form": form,
+                "form_loaded_at": timezone.now().timestamp(),
+            },
+            status=422,
+        )
+
+    partnership = form.save()
+
+    # Notify admin — fail silently to never break the steward's flow.
+    admin_email = getattr(settings, "ADMIN_EMAIL", None)
+    if admin_email:
+        send_mail(
+            subject=(
+                f"[Bookworm] New steward partnership: "
+                f"{partnership.library_address[:60]}"
+            ),
+            message=(
+                f"A steward has submitted a partnership response.\n\n"
+                f"Library: {partnership.library_address}\n"
+                f"Name: {partnership.name or '(not provided)'}\n"
+                f"Contact: {partnership.contact}\n"
+                f"Sticker interest: {'Yes' if partnership.sticker_interest else 'No'}\n"
+                f"Library Hunt interest: "
+                f"{partnership.get_hunt_interest_display()}\n"
+                f"Visitor message: {partnership.hunt_message or '(none)'}\n\n"
+                f"Review and match to a library record in the admin:\n"
+                f"https://bookworm.guide/admin/libraries/stewardpartnership/"
+                f"{partnership.pk}/change/\n"
+            ),
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", admin_email),
+            recipient_list=[admin_email],
+            fail_silently=True,
+        )
+
+    logger.info(
+        "steward_partnership_submitted",
+        extra={
+            "partnership_id": partnership.pk,
+            "sticker": partnership.sticker_interest,
+            "hunt": partnership.hunt_interest,
+        },
+    )
+
+    return redirect("libraries:partnership_thanks")
+
+
+@require_GET
+def partnership_thanks(request):
+    """GET /partners/thanks/ — post-submission thank-you page."""
+    return render(request, "libraries/partnership_thanks.html", {})
+
+
+# -----------------------------------------------------------------------------
+# /here/ — QR sticker landing page + coord resolver
+# -----------------------------------------------------------------------------
+
+
+@require_GET
+def here_landing(request):
+    """
+    GET /here/ — the QR sticker target.
+
+    Renders a minimal full page with a 'Find my library' button. The button
+    triggers JS-side geolocation (gesture required by modern browsers), then
+    POSTs the coords to /here/resolve/ via HTMX.
+    """
+    return render(request, "libraries/here.html", {})
+
+
+@require_POST
+@rate_limit("here_resolve", limit=20, period=300)
+def here_resolve(request):
+    """
+    POST /here/resolve/ — resolve a scan's coords to a library.
+
+    Returns one of:
+      - HX-Redirect header → browser navigates to library detail page
+      - here_picker.html partial → user chooses among ambiguous candidates
+      - here_no_match.html partial → no library within 100m
+
+    Rate-limited generously (20/5min) to absorb Library Hunt day bursts.
+    """
+    lat = _coerce_float(request.POST.get("lat"))
+    lng = _coerce_float(request.POST.get("lng"))
+    accuracy = _coerce_float(request.POST.get("accuracy"))
+    accuracy_int = int(accuracy) if accuracy is not None else None
+
+    if lat is None or lng is None or not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
+        _log_scan("error")
+        return render(request, "libraries/partials/here_no_match.html", {}, status=400)
+
+    user_point = Point(lng, lat, srid=4326)
+
+    # Pull candidates within 100m, ordered by distance.
+    # We do a separate .count() before the slice so analytics records the
+    # true number of nearby libraries — len(candidates) caps at
+    # HERE_PICKER_MAX_CANDIDATES + 1, which would understate cluster density.
+    candidates_qs = (
+        Library.objects.filter(
+            is_verified=True,
+            is_active=True,
+            location__distance_lte=(user_point, D(m=HERE_PICKER_RADIUS_M)),
+        )
+        .annotate(distance=Distance("location", user_point))
+        .order_by("distance")
+    )
+    total_candidate_count = candidates_qs.count()
+    candidates = list(candidates_qs[: HERE_PICKER_MAX_CANDIDATES + 1])
+
+    if not candidates:
+        _log_scan("no_match", user_point=user_point, accuracy=accuracy_int)
+        return render(request, "libraries/partials/here_no_match.html", {})
+
+    nearest = candidates[0]
+    nearest_dist_m = nearest.distance.m
+
+    # Decision tree for direct match vs picker.
+    is_clear_winner = (
+            nearest_dist_m <= HERE_DIRECT_MATCH_RADIUS_M
+            and (
+                    len(candidates) == 1
+                    or candidates[1].distance.m - nearest_dist_m >= HERE_DISAMBIGUATION_GAP_M
+            )
+    )
+
+    if is_clear_winner:
+        _log_scan(
+            "matched",
+            matched=nearest,
+            candidate_count=total_candidate_count,
+            user_point=user_point,
+            accuracy=accuracy_int,
+        )
+        response = HttpResponse("")
+        response["HX-Redirect"] = nearest.get_absolute_url()
+        return response
+
+    # Picker. Trim to top N for display.
+    display_candidates = candidates[:HERE_PICKER_MAX_CANDIDATES]
+    _log_scan(
+        "picker_shown",
+        candidate_count=total_candidate_count,
+        user_point=user_point,
+        accuracy=accuracy_int,
+    )
+    return render(
+        request,
+        "libraries/partials/here_picker.html",
+        {
+            "candidates": display_candidates,
+        },
+    )
+
+
+@require_POST
+@rate_limit("here_log", limit=20, period=300)
+def here_log(request):
+    """
+    POST /here/log/ — fire-and-forget logging of geolocation denial/error.
+
+    Called by JS when navigator.geolocation fails (permission denied, timeout,
+    position unavailable). We log the outcome so we can monitor friction.
+
+    Rate-limited generously (20/5min) — a real user hits this once or twice
+    if their permission is denied; the limit exists to prevent a bot with a
+    valid CSRF token from polluting ScanEvent analytics. The fire-and-forget
+    JS caller doesn't read the response, so a 429 is silently dropped.
+    """
+    outcome = request.POST.get("outcome", "error")
+    if outcome not in {"denied", "error"}:
+        outcome = "error"
+    _log_scan(outcome)
+    return HttpResponse("")
 
 # =============================================================================
 # Sitemap Crawler

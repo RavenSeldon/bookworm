@@ -6,14 +6,15 @@ Includes bulk actions and custom filters.
 """
 
 from datetime import timedelta
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
+from django.db import transaction
 from django.utils import timezone
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count
 
-from .models import Library, Shelfie, IssueReport
+from .models import Library, Shelfie, IssueReport, StewardPartnership, ScanEvent, DuplicateCandidate
 
 
 # =============================================================================
@@ -65,6 +66,25 @@ class HasIssuesFilter(admin.SimpleListFilter):
             return queryset.filter(issue_reports__is_resolved=False).distinct()
         elif self.value() == 'no':
             return queryset.exclude(issue_reports__is_resolved=False)
+        return queryset
+
+
+class HasPendingDuplicatesFilter(admin.SimpleListFilter):
+    """Filter libraries that are flagged as potential duplicates pending review."""
+
+    title = 'pending duplicate review'
+    parameter_name = 'pending_dupes'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('yes', 'Flagged as potential duplicate'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'yes':
+            return queryset.filter(
+                duplicate_candidates__disposition=DuplicateCandidate.PENDING
+            ).distinct()
         return queryset
 
 
@@ -127,6 +147,7 @@ class LibraryAdmin(GISModelAdmin):
         'is_active',
         FreshnessFilter,
         HasIssuesFilter,
+        HasPendingDuplicatesFilter,
         'created_at',
     ]
     search_fields = ['name', 'description', 'submitted_by_email']
@@ -304,6 +325,409 @@ class IssueReportAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} report(s) marked as resolved.")
 
     @admin.action(description="Mark selected reports as unresolved")
-    def mark_unresolpyved(self, request, queryset):
+    def mark_unresolved(self, request, queryset):
         updated = queryset.update(is_resolved=False)
         self.message_user(request, f"{updated} report(s) marked as unresolved.")
+
+
+@admin.register(StewardPartnership)
+class StewardPartnershipAdmin(admin.ModelAdmin):
+    list_display = (
+        "library_address_short",
+        "name",
+        "sticker_interest",
+        "hunt_interest_display_short",
+        "library",
+        "is_processed",
+        "submitted_at",
+    )
+    list_filter = (
+        "is_processed",
+        "sticker_interest",
+        "hunt_interest",
+        "submitted_at",
+    )
+    search_fields = (
+        "library_address",
+        "name",
+        "contact",
+        "hunt_message",
+        "admin_notes",
+    )
+    readonly_fields = ("submitted_at",)
+    autocomplete_fields = ("library",)
+    actions = ("mark_processed", "mark_unprocessed")
+
+    fieldsets = (
+        ("Steward submission", {
+            "fields": (
+                "library_address",
+                "name",
+                "contact",
+                "submitted_at",
+            ),
+        }),
+        ("Partnership", {
+            "fields": (
+                "sticker_interest",
+                "hunt_interest",
+                "hunt_message",
+            ),
+        }),
+        ("Admin workflow", {
+            "fields": (
+                "library",
+                "is_processed",
+                "admin_notes",
+            ),
+        }),
+    )
+
+    @admin.display(description="Library address", ordering="library_address")
+    def library_address_short(self, obj):
+        if not obj.library_address:
+            return "—"
+        return (
+            obj.library_address[:60] + "…"
+            if len(obj.library_address) > 60
+            else obj.library_address
+        )
+
+    @admin.display(description="Hunt", ordering="hunt_interest")
+    def hunt_interest_display_short(self, obj):
+        return obj.hunt_interest_display_short
+
+    @admin.action(description="Mark selected as processed")
+    def mark_processed(self, request, queryset):
+        updated = queryset.update(is_processed=True)
+        self.message_user(request, f"{updated} consent(s) marked as processed.")
+
+    @admin.action(description="Mark selected as unprocessed")
+    def mark_unprocessed(self, request, queryset):
+        updated = queryset.update(is_processed=False)
+        self.message_user(request, f"{updated} consent(s) marked as unprocessed.")
+
+
+@admin.register(ScanEvent)
+class ScanEventAdmin(admin.ModelAdmin):
+    """
+    Read-mostly analytics view. Admin can browse/filter scans but can't edit
+    them (data integrity for the analytics).
+    """
+
+    list_display = (
+        "occurred_at",
+        "outcome",
+        "matched_library",
+        "candidate_count",
+        "accuracy_meters",
+    )
+    list_filter = ("outcome", "occurred_at")
+    search_fields = ("matched_library__name",)
+    readonly_fields = (
+        "outcome",
+        "matched_library",
+        "candidate_count",
+        "location",
+        "accuracy_meters",
+        "occurred_at",
+    )
+    date_hierarchy = "occurred_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # View-only; existing records can be browsed but not edited.
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Allow purging old scans for housekeeping.
+        return True
+
+
+# =============================================================================
+# DuplicateCandidate Admin (Phase 3)
+# =============================================================================
+
+@admin.register(DuplicateCandidate)
+class DuplicateCandidateAdmin(admin.ModelAdmin):
+    """
+    Side-by-side review of potential duplicate library submissions.
+
+    Bulk actions cover the simple dispositions (approve as new / reject).
+    The merge action lives separately (Phase 3 P2) because it has to
+    reassign Shelfies, IssueReports, and StewardPartnerships in a
+    transaction — not safe as an unconfirmed bulk action.
+    """
+
+    list_display = (
+        "id",
+        "submitted_link",
+        "existing_link",
+        "distance_meters",
+        "disposition",
+        "created_at",
+    )
+    list_filter = ("disposition", "created_at")
+    search_fields = (
+        "submitted_library__name",
+        "existing_library__name",
+        "admin_notes",
+    )
+    readonly_fields = (
+        "submitted_library",
+        "existing_library",
+        "distance_meters",
+        "created_at",
+        "resolved_at",
+        "side_by_side_view",
+    )
+    fieldsets = (
+        ("Spatial match", {
+            "fields": (
+                "submitted_library",
+                "existing_library",
+                "distance_meters",
+                "side_by_side_view",
+            ),
+        }),
+        ("Admin disposition", {
+            "fields": (
+                "disposition",
+                "admin_notes",
+                "created_at",
+                "resolved_at",
+            ),
+        }),
+    )
+    actions = ("approve_as_new", "merge_into_existing", "reject")
+    date_hierarchy = "created_at"
+
+    @admin.display(description="Submitted (new)", ordering="submitted_library")
+    def submitted_link(self, obj):
+        url = reverse(
+            "admin:libraries_library_change", args=[obj.submitted_library_id]
+        )
+        return format_html('<a href="{}">#{} {}</a>',
+                           url, obj.submitted_library_id,
+                           obj.submitted_library.name or "(unnamed)")
+
+    @admin.display(description="Existing", ordering="existing_library")
+    def existing_link(self, obj):
+        url = reverse(
+            "admin:libraries_library_change", args=[obj.existing_library_id]
+        )
+        return format_html('<a href="{}">#{} {}</a>',
+                           url, obj.existing_library_id,
+                           obj.existing_library.name or "(unnamed)")
+
+    @admin.display(description="Side-by-side comparison")
+    def side_by_side_view(self, obj):
+        """Render a compact comparison table for the change form."""
+        def _photo(library):
+            shelfie = library.latest_shelfie
+            if shelfie and shelfie.photo:
+                return format_html(
+                    '<img src="{}" style="max-width: 280px; max-height: 200px; '
+                    'object-fit: cover; border-radius: 4px;" />',
+                    shelfie.photo.url,
+                )
+            return "(no shelfie)"
+
+        def _coords(library):
+            if library.location:
+                return f"{library.location.y:.5f}, {library.location.x:.5f}"
+            return "—"
+
+        return format_html(
+            '<table style="border-collapse: collapse; width: 100%;">'
+            '<thead><tr>'
+            '<th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">Submitted (new)</th>'
+            '<th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">Existing</th>'
+            '</tr></thead>'
+            '<tbody><tr>'
+            '<td style="padding: 8px; vertical-align: top; width: 50%;">'
+            '<div><strong>{sub_name}</strong></div>'
+            '<div style="color: #666; font-size: 12px;">#{sub_pk} · {sub_coords}</div>'
+            '<div style="margin: 6px 0;">{sub_desc}</div>'
+            '<div>{sub_photo}</div>'
+            '</td>'
+            '<td style="padding: 8px; vertical-align: top; width: 50%;">'
+            '<div><strong>{ex_name}</strong></div>'
+            '<div style="color: #666; font-size: 12px;">#{ex_pk} · {ex_coords}</div>'
+            '<div style="margin: 6px 0;">{ex_desc}</div>'
+            '<div>{ex_photo}</div>'
+            '</td>'
+            '</tr></tbody></table>',
+            sub_name=obj.submitted_library.name or "(unnamed)",
+            sub_pk=obj.submitted_library_id,
+            sub_coords=_coords(obj.submitted_library),
+            sub_desc=obj.submitted_library.description or "(no description)",
+            sub_photo=_photo(obj.submitted_library),
+            ex_name=obj.existing_library.name or "(unnamed)",
+            ex_pk=obj.existing_library_id,
+            ex_coords=_coords(obj.existing_library),
+            ex_desc=obj.existing_library.description or "(no description)",
+            ex_photo=_photo(obj.existing_library),
+        )
+
+    @admin.action(
+        description="Merge submitted into existing (single selection only)"
+    )
+    def merge_into_existing(self, request, queryset):
+        """
+        Merge the submitted library into the existing one.
+
+        Single-selection only — bulk merge would require per-row target
+        selection, which doesn't fit Django's bulk-action model. Selecting
+        multiple rows is rejected with an admin message.
+
+        Merge rules (see CODEBASE.md ‘Phase 3 merge semantics’):
+          - Existing library survives unchanged in identity.
+          - Reassign FKs from submitted → existing for: Shelfie.library,
+            IssueReport.library, StewardPartnership.library.
+          - existing.last_updated = max(existing.last_updated,
+            submitted.last_updated). Bulk reassignment doesn't fire the
+            post_save signal, so we set this explicitly.
+          - Submitted library: is_active=False, merged_into=existing.
+            Preserves audit; the active-filter on public views naturally
+            hides it.
+          - This candidate: disposition=MERGED, resolved_at=now().
+          - Auto-resolve sibling pending candidates: any other pending
+            DuplicateCandidate rows whose submitted_library is the one
+            being merged also get disposition=MERGED. Once the submission
+            is merged into one survivor, parallel flags pointing at other
+            existing libraries are moot.
+        """
+        pending = list(
+            queryset.select_related(
+                "submitted_library", "existing_library"
+            ).filter(disposition=DuplicateCandidate.PENDING)
+        )
+        if len(pending) == 0:
+            self.message_user(
+                request,
+                "No pending candidates selected. Merge only operates on "
+                "PENDING candidates.",
+                level=messages.WARNING,
+            )
+            return
+        if len(pending) > 1:
+            self.message_user(
+                request,
+                "Merge operates on a single candidate at a time. Select "
+                "exactly one row and try again.",
+                level=messages.ERROR,
+            )
+            return
+
+        candidate = pending[0]
+        self._perform_merge(candidate)
+        self.message_user(
+            request,
+            f"Merged Library #{candidate.submitted_library_id} into "
+            f"#{candidate.existing_library_id}. Submitted library "
+            f"deactivated; FKs reassigned.",
+            level=messages.SUCCESS,
+        )
+
+    @staticmethod
+    def _perform_merge(candidate):
+        """
+        Execute the merge inside a single atomic transaction.
+
+        Extracted as a staticmethod so tests can call it directly without
+        going through the bulk-action wrapper.
+        """
+        submitted = candidate.submitted_library
+        existing = candidate.existing_library
+        now = timezone.now()
+
+        with transaction.atomic():
+            # 1. Reassign Shelfie.library. Bulk update — doesn't fire the
+            #    post_save signal, which is what we want (we set
+            #    last_updated explicitly below).
+            Shelfie.objects.filter(library=submitted).update(library=existing)
+
+            # 2. Reassign IssueReport.library. The shelfie FK on each report
+            #    is preserved as-is — since we just moved that shelfie to
+            #    `existing`, the report's shelfie pointer still resolves.
+            IssueReport.objects.filter(library=submitted).update(
+                library=existing
+            )
+
+            # 3. Reassign StewardPartnership.library — preserves admin's
+            #    manual matches if any pointed at the soon-to-be-doomed row.
+            StewardPartnership.objects.filter(library=submitted).update(
+                library=existing
+            )
+
+            # 4. Promote existing.last_updated if the doomed row had a
+            #    fresher shelfie. Use update() to skip Library.save()'s
+            #    slug-overwrite side effect.
+            new_last_updated = max(existing.last_updated, submitted.last_updated)
+            if new_last_updated != existing.last_updated:
+                Library.objects.filter(pk=existing.pk).update(
+                    last_updated=new_last_updated
+                )
+
+            # 5. Soft-delete submitted with the audit pointer set.
+            Library.objects.filter(pk=submitted.pk).update(
+                is_active=False,
+                merged_into=existing,
+            )
+
+            # 6. Mark this candidate resolved.
+            candidate.disposition = DuplicateCandidate.MERGED
+            candidate.resolved_at = now
+            candidate.save(update_fields=["disposition", "resolved_at"])
+
+            # 7. Auto-resolve sibling pending candidates pointing at the
+            #    same submitted library — once it's merged, parallel flags
+            #    are moot.
+            DuplicateCandidate.objects.filter(
+                submitted_library=submitted,
+                disposition=DuplicateCandidate.PENDING,
+            ).update(disposition=DuplicateCandidate.MERGED, resolved_at=now)
+
+    @admin.action(description="Approve selected as new (clear flag)")
+    def approve_as_new(self, request, queryset):
+        """
+        Mark candidate(s) as approved-new: the submitted library is genuinely
+        a new library, not a duplicate. Clears the flag for admin.
+        Does NOT touch is_verified — admin still verifies via the standard
+        Library admin flow.
+        """
+        pending = queryset.filter(disposition=DuplicateCandidate.PENDING)
+        updated = pending.update(
+            disposition=DuplicateCandidate.APPROVED_NEW,
+            resolved_at=timezone.now(),
+        )
+        self.message_user(
+            request, f"{updated} candidate(s) approved as genuinely new."
+        )
+
+    @admin.action(description="Reject selected as junk (deactivate submitted library)")
+    def reject(self, request, queryset):
+        """
+        Mark candidate(s) as rejected: the submitted library is not legitimate.
+        Deactivates the submitted Library (soft-delete) and resolves the candidate.
+        Existing libraries are untouched.
+        """
+        pending = queryset.select_related("submitted_library").filter(
+            disposition=DuplicateCandidate.PENDING
+        )
+        count = 0
+        for candidate in pending:
+            # Soft-delete the submitted library and resolve the candidate.
+            Library.objects.filter(pk=candidate.submitted_library_id).update(
+                is_active=False
+            )
+            candidate.disposition = DuplicateCandidate.REJECTED
+            candidate.resolved_at = timezone.now()
+            candidate.save(update_fields=["disposition", "resolved_at"])
+            count += 1
+        self.message_user(
+            request, f"{count} submission(s) rejected and deactivated."
+        )

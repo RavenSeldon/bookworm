@@ -1,0 +1,34 @@
+{% comment %}
+No-match partial — rendered when /here/resolve/ finds no library within
+100m of the user's coordinates, OR when coords are invalid.
+
+Two distinct scenarios converge here intentionally:
+  1. The steward's library hasn't been added to Bookworm yet (the most
+     common case for a fresh sticker on an unmapped library).
+  2. The user wandered far from any LFL between scanning and the geo lookup
+     resolving (rare; still handled gracefully).
+
+Both resolve to the same UX: surface the "submit a new library" path
+prominently, since this is exactly the moment someone is standing in
+front of an unmapped LFL with their phone open.
+
+All styling lives in here.html's <style> block.
+{% endcomment %}
+
+<div class="here-result-card">
+    <h2>We couldn't spot a library from here.</h2>
+    <p>
+        A few things this could mean: this library isn't on Bookworm yet
+        (you could be the first to add it!), GPS is being shy in this
+        spot, or you've drifted out of range.
+    </p>
+
+    <div class="no-match-actions">
+        <a href="{% url 'libraries:map' %}?submit=1" class="btn-here-ghost">
+            Add this library to Bookworm
+        </a>
+        <a href="{% url 'libraries:map' %}" class="btn-here-ghost">
+            Open the map and tap manually
+        </a>
+    </div>
+</div>
