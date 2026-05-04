@@ -926,6 +926,8 @@
         let retryTimeout = null;
 
         async function loadLibraries() {
+            if (map._popup && map._popup.isOpen()) return;
+
             try {
                 // Get current map bounds with a small buffer (10%)
                 const bounds = map.getBounds();
@@ -981,7 +983,8 @@
                     marker.bindPopup(popupContent, {
                         maxWidth: 300,
                         minWidth: 260,
-                        className: 'custom-popup'
+                        className: 'custom-popup',
+                        autoPan: false
                     });
 
                     marker.libraryId = props.id;
@@ -1441,10 +1444,7 @@
             if (mapRefreshTimeout) {
                 clearTimeout(mapRefreshTimeout);
             }
-            mapRefreshTimeout = setTimeout(function() {
-                if (map._popup && map._popup.isOpen()) return;
-                loadLibraries();
-            }, 400);
+            mapRefreshTimeout = setTimeout(loadLibraries, 400);
         }
 
         // Reload libraries when map view changes
