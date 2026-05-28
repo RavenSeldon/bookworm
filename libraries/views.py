@@ -834,9 +834,10 @@ def report_form_partial(request, library_pk):
 # Picker thresholds — adjust based on real scan distance distributions after
 # the first few weeks of stickers in the wild.
 HERE_DIRECT_MATCH_RADIUS_M = 25  # nearest within 25m → likely the right one
-HERE_PICKER_RADIUS_M = 100  # nothing past 100m is a plausible candidate
+HERE_PICKER_RADIUS_M = 150  # candidates within 150m — covers "next block over" (~120m) plus GPS scatter
 HERE_DISAMBIGUATION_GAP_M = 50  # gap between #1 and #2 to call it "clear"
 HERE_PICKER_MAX_CANDIDATES = 3  # most candidates we'll show in the picker
+HERE_FALLBACK_RADIUS_M = 500  # when nothing's within the picker radius, reach this far to hint the closest
 
 
 def _round_coord(value: float, places: int = 4) -> float:
@@ -1074,9 +1075,13 @@ def here_resolve(request):
     POST /here/resolve/ — resolve a scan's coords to a library.
 
     Returns one of:
-      - HX-Redirect header → browser navigates to library detail page
+      - here_confirm.html partial → a single confident match, surfaced for
+        the user to confirm before navigating (no silent redirect — a scan
+        can land a few metres off, and an auto-jump to the wrong library is
+        disorienting)
       - here_picker.html partial → user chooses among ambiguous candidates
-      - here_no_match.html partial → no library within 100m
+      - here_no_match.html partial → nothing within the picker radius
+      - here_location_error.html partial → coords missing/invalid (HTTP 400)
 
     Rate-limited generously (20/5min) to absorb Library Hunt day bursts.
     """
@@ -1087,11 +1092,11 @@ def here_resolve(request):
 
     if lat is None or lng is None or not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
         _log_scan("error")
-        return render(request, "libraries/partials/here_no_match.html", {}, status=400)
+        return render(request, "libraries/partials/here_location_error.html", {}, status=400)
 
     user_point = Point(lng, lat, srid=4326)
 
-    # Pull candidates within 100m, ordered by distance.
+    # Pull candidates within the picker radius, ordered by distance.
     # We do a separate .count() before the slice so analytics records the
     # true number of nearby libraries — len(candidates) caps at
     # HERE_PICKER_MAX_CANDIDATES + 1, which would understate cluster density.
@@ -1108,8 +1113,33 @@ def here_resolve(request):
     candidates = list(candidates_qs[: HERE_PICKER_MAX_CANDIDATES + 1])
 
     if not candidates:
+        # Nothing within the picker radius. Reach out to the fallback radius
+        # so the dead-end can point at the closest known library ("~120 m
+        # away — is this it?") instead of a flat no-match. One extra query,
+        # only on the empty path.
+        nearest_nearby = (
+            Library.objects.filter(
+                is_verified=True,
+                is_active=True,
+                location__distance_lte=(user_point, D(m=HERE_FALLBACK_RADIUS_M)),
+            )
+            .annotate(distance=Distance("location", user_point))
+            .order_by("distance")
+            .first()
+        )
         _log_scan("no_match", user_point=user_point, accuracy=accuracy_int)
-        return render(request, "libraries/partials/here_no_match.html", {})
+        return render(
+            request,
+            "libraries/partials/here_no_match.html",
+            {
+                "nearest": nearest_nearby,
+                "nearest_distance_m": (
+                    int(round(nearest_nearby.distance.m))
+                    if nearest_nearby
+                    else None
+                ),
+            },
+        )
 
     nearest = candidates[0]
     nearest_dist_m = nearest.distance.m
@@ -1131,9 +1161,18 @@ def here_resolve(request):
             user_point=user_point,
             accuracy=accuracy_int,
         )
-        response = HttpResponse("")
-        response["HX-Redirect"] = nearest.get_absolute_url()
-        return response
+        # Surface the match for confirmation rather than redirecting straight
+        # to it. The user taps through to the library page (a normal full-page
+        # nav, same as the picker), which doubles as their confirmation that
+        # we identified the right one.
+        return render(
+            request,
+            "libraries/partials/here_confirm.html",
+            {
+                "match": nearest,
+                "match_distance_m": int(round(nearest_dist_m)),
+            },
+        )
 
     # Picker. Trim to top N for display.
     display_candidates = candidates[:HERE_PICKER_MAX_CANDIDATES]

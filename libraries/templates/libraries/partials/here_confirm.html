@@ -1,0 +1,58 @@
+{% comment %}
+Confirmation partial — rendered when /here/resolve/ finds a single confident
+match: the nearest library is within HERE_DIRECT_MATCH_RADIUS_M and has no
+close rival (or is the only candidate in range).
+
+Previously this case redirected straight to the library page. We now surface
+the match and let the user confirm it — a scan can resolve a few metres off,
+and a silent jump to the wrong library is disorienting. Tapping the card is a
+normal full-page navigation to the library detail (same mechanism as the
+picker), so the tap itself is the confirmation.
+
+The escape paths mirror here_no_match so a user whose actual library is
+unmapped (the usual reason a confident-but-wrong match happens) isn't stuck.
+
+Context:
+  match            — the matched Library (with a `.distance` annotation).
+  match_distance_m — its distance in whole metres.
+
+All styling lives in here.html's <style> block (partials stay style-free).
+{% endcomment %}
+
+<div class="here-result-card">
+    <h2>Are you at this library?</h2>
+    <p>
+        We found one right about where you're standing. Tap it to confirm and
+        see what's on the shelf — or, if it's not the one in front of you,
+        choose another option below.
+    </p>
+
+    <ul class="picker-list">
+        <li>
+            <a href="{{ match.get_absolute_url }}" class="picker-link">
+                <div class="picker-name">
+                    {% if match.name %}
+                        {{ match.name }}
+                    {% else %}
+                        <span class="picker-name-empty">Unnamed library</span>
+                    {% endif %}
+                </div>
+                {% if match.description %}
+                    <div class="picker-desc">
+                        {{ match.description|truncatechars:80 }}
+                    </div>
+                {% endif %}
+                <div class="picker-distance">{{ match_distance_m }} m away</div>
+            </a>
+        </li>
+    </ul>
+
+    <div class="no-match-actions">
+        <a href="{% url 'libraries:map' %}?submit=1" class="btn-here-ghost">
+            This isn't it — add a library
+        </a>
+        <a href="{% url 'libraries:map' %}" class="btn-here-ghost">
+            Open the map and tap manually
+        </a>
+    </div>
+</div>

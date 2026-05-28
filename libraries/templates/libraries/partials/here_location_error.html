@@ -1,0 +1,32 @@
+{% comment %}
+Location-error partial — rendered when /here/resolve/ receives coordinates
+it can't use: missing lat/lng, unparseable values, or values outside valid
+geographic bounds. Returned with HTTP 400.
+
+This is deliberately distinct from here_no_match.html. The two used to share
+a screen, which made debugging hard: "we couldn't read your location" and
+"there's no library nearby" are completely different failures and should read
+that way. This partial means the coordinates never arrived in usable form —
+NOT that the area is empty.
+
+The "Find my library" button is still on the page above this result, so the
+copy points the user back at it to retry.
+
+All styling lives in here.html's <style> block (partials stay style-free).
+{% endcomment %}
+
+<div class="here-result-card">
+    <h2>We couldn't read your location.</h2>
+    <p>
+        Your device didn't send a position we could use. This can happen if the
+        location prompt was dismissed, or if GPS hiccupped mid-scan. Tap
+        "Find my library" to try again — or open the map and pick your spot by
+        hand.
+    </p>
+
+    <div class="no-match-actions">
+        <a href="{% url 'libraries:map' %}" class="btn-here-ghost">
+            Open the map and tap manually
+        </a>
+    </div>
+</div>

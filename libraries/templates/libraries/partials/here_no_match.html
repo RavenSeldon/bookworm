@@ -1,27 +1,62 @@
 {% comment %}
-No-match partial — rendered when /here/resolve/ finds no library within
-100m of the user's coordinates, OR when coords are invalid.
+No-match partial — rendered when /here/resolve/ finds no library within the
+picker radius (HERE_PICKER_RADIUS_M) of the user's coordinates.
 
-Two distinct scenarios converge here intentionally:
-  1. The steward's library hasn't been added to Bookworm yet (the most
-     common case for a fresh sticker on an unmapped library).
-  2. The user wandered far from any LFL between scanning and the geo lookup
-     resolving (rare; still handled gracefully).
+The coordinates were valid; there's just nothing close. (Invalid or missing
+coordinates are handled separately by here_location_error.html.)
 
-Both resolve to the same UX: surface the "submit a new library" path
-prominently, since this is exactly the moment someone is standing in
-front of an unmapped LFL with their phone open.
+Two shapes, driven by context:
+  1. `nearest` is set — there IS a library within the wider fallback radius
+     (HERE_FALLBACK_RADIUS_M), just outside the picker range. We surface it
+     as "the closest is ~X m away — is this it?" so the user isn't dead-ended.
+  2. `nearest` is None — nothing even within the fallback radius. Most likely
+     the library simply isn't on Bookworm yet, so we lead with "add it."
+
+Either way the submit + manual-map paths stay available as the floor.
+
+Context:
+  nearest            — closest Library within the fallback radius, or None.
+  nearest_distance_m — that library's distance in whole metres, or None.
 
 All styling lives in here.html's <style> block.
 {% endcomment %}
 
 <div class="here-result-card">
-    <h2>We couldn't spot a library from here.</h2>
-    <p>
-        A few things this could mean: this library isn't on Bookworm yet
-        (you could be the first to add it!), GPS is being shy in this
-        spot, or you've drifted out of range.
-    </p>
+    {% if nearest %}
+        <h2>You might be just outside one.</h2>
+        <p>
+            Nothing's right where you're standing, but the closest library we
+            know of is about {{ nearest_distance_m }} m away. If that's the one
+            in front of you, open it — otherwise it may not be on Bookworm yet.
+        </p>
+
+        <ul class="picker-list">
+            <li>
+                <a href="{{ nearest.get_absolute_url }}" class="picker-link">
+                    <div class="picker-name">
+                        {% if nearest.name %}
+                            {{ nearest.name }}
+                        {% else %}
+                            <span class="picker-name-empty">Unnamed library</span>
+                        {% endif %}
+                    </div>
+                    {% if nearest.description %}
+                        <div class="picker-desc">
+                            {{ nearest.description|truncatechars:80 }}
+                        </div>
+                    {% endif %}
+                    <div class="picker-distance">{{ nearest_distance_m }} m away</div>
+                </a>
+            </li>
+        </ul>
+    {% else %}
+        <h2>We couldn't spot a library from here.</h2>
+        <p>
+            A few things this could mean: this library isn't on Bookworm yet
+            (you could be the first to add it!), GPS is being shy in this
+            spot, or you've drifted out of range.
+        </p>
+    {% endif %}
 
     <div class="no-match-actions">
         <a href="{% url 'libraries:map' %}?submit=1" class="btn-here-ghost">
