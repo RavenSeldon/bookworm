@@ -405,20 +405,38 @@ if os.environ.get('ENABLE_HTTPS', 'false').lower() == 'true':
 # SECURE_HSTS_PRELOAD = True
 
 # =============================================================================
-# EMAIL (Admin notifications)
+# EMAIL
 # =============================================================================
-RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
-if RESEND_API_KEY:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.resend.com'
-    EMAIL_PORT = 465
-    EMAIL_USE_SSL = True
-    EMAIL_HOST_USER = 'resend'
-    EMAIL_HOST_PASSWORD = RESEND_API_KEY
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Bookworm <ben@bookworm.guide>')
-SERVER_EMAIL = os.environ.get('SERVER_EMAIL', 'Bookworm <ben@bookworm.guide>')
-EMAIL_REPLY_TO = os.environ.get('EMAIL_REPLY_TO', 'ben@bookworm.guide')
-ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
+def env_bool(name, default=False):
+    return os.environ.get(str(name), str(default)).lower() in ("true", "1", "yes", "on")
+
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if RESEND_API_KEY else "django.core.mail.backends.console.EmailBackend",
+)
+
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.resend.com" if RESEND_API_KEY else "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
+
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", True)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
+
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "resend")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", RESEND_API_KEY)
+
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "15"))
+
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "Bookworm <ben@bookworm.guide>",
+)
+SERVER_EMAIL = os.environ.get(
+    "SERVER_EMAIL",
+    "Bookworm <ben@bookworm.guide>",
+)
+EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO", "ben.amuwo@gmail.com")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "ben.amuwo@gmail.com")
