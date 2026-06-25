@@ -62,6 +62,12 @@ urlpatterns = [
     path("here/", views.here_landing, name="here_landing"),
     path("here/resolve/", views.here_resolve, name="here_resolve"),
     path("here/log/", views.here_log, name="here_log"),
+
+    # Library Walk event + registration
+    path("library-walk/", views.library_walk, name="library_walk"),
+    path("library-walk/register/", views.library_walk_register, name="library_walk_register"),
+    path("library-walk/thanks/", views.library_walk_thanks, name="library_walk_thanks"),
+
     # robots.txt
     path("robots.txt", views.robots_txt, name="robots_txt"),
     # Health check

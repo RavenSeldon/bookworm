@@ -9,7 +9,13 @@ Bookworm: Little Library Finder - Forms
 from django import forms
 from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
-from .models import Library, Shelfie, IssueReport, StewardPartnership
+from .models import (
+    Library,
+    Shelfie,
+    IssueReport,
+    StewardPartnership,
+    LibraryWalkRegistration,
+)
 
 
 class HoneypotMixin:
@@ -329,3 +335,83 @@ class StewardPartnershipForm(HoneypotMixin, forms.ModelForm):
                 ),
             )
         return cleaned
+
+
+class LibraryWalkRegistrationForm(HoneypotMixin, forms.ModelForm):
+    """
+    Registration for the Free Little Library Walk.
+
+    Optional and lightweight. Reuses the project anti-spam stack: the
+    HoneypotMixin wires up the hidden website_url field, the view runs the
+    timing check, and the view is rate-limited.
+    """
+
+    class Meta:
+        model = LibraryWalkRegistration
+        fields = [
+            "name",
+            "email",
+            "party_size",
+            "favourite_book",
+            "accessibility_notes",
+            "needs_accessibility_followup",
+        ]
+        widgets = {
+            "name": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "autocomplete": "name",
+                    "placeholder": "First name is fine",
+                }
+            ),
+            "email": forms.EmailInput(
+                attrs={
+                    "class": "form-control",
+                    "autocomplete": "email",
+                    "placeholder": "you@example.com",
+                }
+            ),
+            "party_size": forms.NumberInput(
+                attrs={"class": "form-control", "min": "1", "max": "20"}
+            ),
+            "favourite_book": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "A book you love (optional)",
+                }
+            ),
+            "accessibility_notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 3,
+                    "placeholder": "Anything that would help us make the day work for you",
+                }
+            ),
+            "needs_accessibility_followup": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+        }
+        labels = {
+            "name": "Your name",
+            "email": "Email",
+            "party_size": "How many are coming?",
+            "favourite_book": "A favourite book",
+            "accessibility_notes": "Accessibility needs",
+            "needs_accessibility_followup": (
+                "I'd like someone to follow up with me about accessibility."
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["party_size"].initial = 1
+        self.fields["party_size"].required = False
+        self.fields["favourite_book"].required = False
+        self.fields["accessibility_notes"].required = False
+        self.fields["needs_accessibility_followup"].required = False
+
+    def clean_party_size(self):
+        size = self.cleaned_data.get("party_size")
+        if not size or size < 1:
+            return 1
+        return size

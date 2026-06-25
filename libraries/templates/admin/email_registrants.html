@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p>You are about to email the {{ registrations|length }} selected registrant(s).
+Each person receives their own message - addresses are never shared. A greeting
+("Hi [name],") and an opt-out footer are added automatically.</p>
+
+<ul>
+    {% for reg in registrations %}
+        <li>{{ reg.name|default:"(no name)" }} &lt;{{ reg.email }}&gt;</li>
+    {% endfor %}
+</ul>
+
+<form action="" method="post">{% csrf_token %}
+    {% for pk in selected %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">
+    {% endfor %}
+    <input type="hidden" name="action" value="email_registrants">
+
+    <fieldset class="module aligned">
+        <div class="form-row">
+            <div>
+                <label class="required" for="id_subject">Subject:</label>
+                <input type="text" name="subject" id="id_subject" class="vTextField" maxlength="200" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div>
+                <label class="required" for="id_message">Message:</label>
+                <textarea name="message" id="id_message" rows="12" cols="60" class="vLargeTextField" required></textarea>
+                <div class="help">Plain text. Your message is sent as both a text and a simple branded HTML email.</div>
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="submit-row">
+        <input type="submit" name="apply" value="Send emails" class="default">
+        <a href="{% url 'admin:libraries_librarywalkregistration_changelist' %}" class="closelink">Cancel</a>
+    </div>
+</form>
+{% endblock %}

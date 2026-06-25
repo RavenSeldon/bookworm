@@ -519,3 +519,54 @@ class DuplicateCandidate(models.Model):
     @property
     def is_pending(self):
         return self.disposition == self.PENDING
+
+
+class LibraryWalkRegistration(models.Model):
+    """
+    A sign-up for the Free Little Library Walk (Sunday, August 16, 2026).
+
+    Optional and lightweight -- registering helps us plan, but walk-ups are
+    welcome. No outbound email is required; an admin notification fires only
+    if ADMIN_EMAIL is configured (fail-silent), matching the submission and
+    partnership flows.
+    """
+
+    name = models.CharField(
+        max_length=120,
+        help_text="We'll put this on your name tag.",
+    )
+    email = models.EmailField(
+        help_text=(
+            "Only used to reach you about this walk -- e.g. if heat or timing "
+            "forces a change. We won't add you to any list."
+        ),
+    )
+    party_size = models.PositiveSmallIntegerField(
+        default=1,
+        help_text="Including you. A rough number is fine -- it helps us plan.",
+    )
+    favourite_book = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Optional. Goes on your name tag as a conversation starter.",
+    )
+    accessibility_notes = models.TextField(
+        blank=True,
+        help_text=(
+            "Tell us about any accessibility needs and we'll reach out "
+            "personally to make the day work for you."
+        ),
+    )
+    needs_accessibility_followup = models.BooleanField(
+        default=False,
+        help_text="I'd like someone to follow up with me about accessibility.",
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        verbose_name = "Library Walk registration"
+        verbose_name_plural = "Library Walk registrations"
+
+    def __str__(self):
+        return f"{self.name} (party of {self.party_size}) -- {self.submitted_at:%Y-%m-%d}"

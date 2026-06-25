@@ -5,16 +5,30 @@ Admin interface for managing libraries, shelfies, and issue reports.
 Includes bulk actions and custom filters.
 """
 
+import csv
 from datetime import timedelta
+
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.gis.admin import GISModelAdmin
 from django.db import transaction
+from django.http import HttpResponse
+from django.shortcuts import render
 from django.utils import timezone
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count
 
-from .models import Library, Shelfie, IssueReport, StewardPartnership, ScanEvent, DuplicateCandidate
+from .models import (
+    Library,
+    Shelfie,
+    IssueReport,
+    StewardPartnership,
+    ScanEvent,
+    DuplicateCandidate,
+    LibraryWalkRegistration,
+)
+from .emails import send_walk_broadcast
 
 
 # =============================================================================
@@ -731,3 +745,82 @@ class DuplicateCandidateAdmin(admin.ModelAdmin):
         self.message_user(
             request, f"{count} submission(s) rejected and deactivated."
         )
+
+
+@admin.register(LibraryWalkRegistration)
+class LibraryWalkRegistrationAdmin(admin.ModelAdmin):
+    """
+    Sign-ups for the Free Little Library Walk. Read-mostly; the CSV export
+    action pulls the list for day-of planning (name tags, headcount,
+    accessibility follow-ups). The email action messages selected registrants.
+    """
+
+    list_display = (
+        "name",
+        "email",
+        "party_size",
+        "needs_accessibility_followup",
+        "submitted_at",
+    )
+    list_filter = ("needs_accessibility_followup", "submitted_at")
+    search_fields = ("name", "email", "favourite_book", "accessibility_notes")
+    readonly_fields = ("submitted_at",)
+    date_hierarchy = "submitted_at"
+    actions = ("export_as_csv", "email_registrants")
+
+    @admin.action(description="Export selected registrations to CSV")
+    def export_as_csv(self, request, queryset):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            'attachment; filename="library_walk_registrations.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow([
+            "Name",
+            "Email",
+            "Party size",
+            "Favourite book",
+            "Accessibility notes",
+            "Wants accessibility follow-up",
+            "Submitted at",
+        ])
+        for reg in queryset:
+            writer.writerow([
+                reg.name,
+                reg.email,
+                reg.party_size,
+                reg.favourite_book,
+                reg.accessibility_notes,
+                "Yes" if reg.needs_accessibility_followup else "No",
+                reg.submitted_at.strftime("%Y-%m-%d %H:%M"),
+            ])
+        return response
+
+    @admin.action(description="Email selected registrants")
+    def email_registrants(self, request, queryset):
+        if request.POST.get("apply"):
+            subject = (request.POST.get("subject") or "").strip()
+            body = (request.POST.get("message") or "").strip()
+            if not subject or not body:
+                self.message_user(
+                    request,
+                    "Subject and message are both required.",
+                    level=messages.ERROR,
+                )
+            else:
+                sent = send_walk_broadcast(queryset, subject, body)
+                self.message_user(
+                    request,
+                    f"Sent {sent} email(s) to registrants.",
+                    level=messages.SUCCESS,
+                )
+                return None
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Email selected registrants",
+            "registrations": queryset,
+            "action_checkbox_name": ACTION_CHECKBOX_NAME,
+            "selected": [str(pk) for pk in queryset.values_list("pk", flat=True)],
+            "opts": self.model._meta,
+        }
+        return render(request, "admin/email_registrants.html", context)

@@ -28,12 +28,12 @@ from django.db.models import Count, Prefetch
 from django.utils import timezone
 from django.template.response import TemplateResponse
 from django.conf import settings
-from django.core.mail import send_mail
 from django.core.cache import cache
 
-from .models import Library, Shelfie, IssueReport, StewardPartnership, ScanEvent, DuplicateCandidate
-from .forms import LibrarySubmissionForm, ShelfieUploadForm, IssueReportForm, StewardPartnershipForm
+from .models import Library, Shelfie, IssueReport, StewardPartnership, ScanEvent, DuplicateCandidate, LibraryWalkRegistration
+from .forms import LibrarySubmissionForm, ShelfieUploadForm, IssueReportForm, StewardPartnershipForm, LibraryWalkRegistrationForm
 from .rate_limiting import rate_limit, check_submission_timing
+from .emails import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -469,9 +469,10 @@ def submit_library(request):
 
             if getattr(settings, 'ADMIN_EMAIL', ''):
                 library_url = request.build_absolute_uri(library.get_absolute_url())
-                send_mail(
+                send_email(
                     subject=f'[Bookworm] New library submitted: {library.name or f"Library #{library.pk}"}',
-                    message=(
+                    to=settings.ADMIN_EMAIL,
+                    text_body=(
                         f'A new library has been submitted and is pending verification.\n\n'
                         f'Name: {library.name or "(unnamed)"}\n'
                         f'Location: {library.location.y:.5f}, {library.location.x:.5f}\n'
@@ -479,9 +480,7 @@ def submit_library(request):
                         f'Review in admin: {request.build_absolute_uri("/admin/libraries/library/" + str(library.pk) + "/change/")}\n'
                         f'Public URL (once verified): {library_url}\n'
                     ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[settings.ADMIN_EMAIL],
-                    fail_silently=True,  # Never crash a user's submission over email
+                    fail_silently=True,
                 )
 
             # Return success response
@@ -571,9 +570,10 @@ def upload_shelfie(request, library_pk):
             )
 
             if getattr(settings, 'ADMIN_EMAIL', ''):
-                send_mail(
+                send_email(
                     subject=f'[Bookworm] New shelfie uploaded: {library.name or f"Library #{library.pk}"}',
-                    message=(
+                    to=settings.ADMIN_EMAIL,
+                    text_body=(
                         f'A new shelfie has been uploaded to a verified library.\n\n'
                         f'Library: {library.name or f"Library #{library.pk}"}\n'
                         f'Shelfie ID: {shelfie.pk}\n'
@@ -582,8 +582,6 @@ def upload_shelfie(request, library_pk):
                         f'Review in admin: {request.build_absolute_uri("/admin/libraries/shelfie/" + str(shelfie.pk) + "/change/")}\n'
                         f'Library page: {request.build_absolute_uri(library.get_absolute_url())}\n'
                     ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[settings.ADMIN_EMAIL],
                     fail_silently=True,
                 )
 
@@ -1010,12 +1008,13 @@ def partnership_submit(request):
     # Notify admin — fail silently to never break the steward's flow.
     admin_email = getattr(settings, "ADMIN_EMAIL", None)
     if admin_email:
-        send_mail(
+        send_email(
             subject=(
                 f"[Bookworm] New steward partnership: "
                 f"{partnership.library_address[:60]}"
             ),
-            message=(
+            to=admin_email,
+            text_body=(
                 f"A steward has submitted a partnership response.\n\n"
                 f"Library: {partnership.library_address}\n"
                 f"Name: {partnership.name or '(not provided)'}\n"
@@ -1028,8 +1027,6 @@ def partnership_submit(request):
                 f"https://bookworm.guide/admin/libraries/stewardpartnership/"
                 f"{partnership.pk}/change/\n"
             ),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", admin_email),
-            recipient_list=[admin_email],
             fail_silently=True,
         )
 
@@ -1231,3 +1228,98 @@ Sitemap: {sitemap_url}"""
 @require_GET
 def health_check(request):
     return JsonResponse({'status': 'ok'})
+
+
+# =============================================================================
+# Library Walk event page + registration
+# =============================================================================
+
+
+@require_GET
+def library_walk(request):
+    """GET /library-walk/ -- the Free Little Library Walk event page."""
+    form = LibraryWalkRegistrationForm()
+    return render(
+        request,
+        "libraries/library_walk.html",
+        {
+            "form": form,
+            "form_loaded_at": timezone.now().timestamp(),
+        },
+    )
+
+
+@require_POST
+@rate_limit("library_walk_register", limit=10, period=3600)
+def library_walk_register(request):
+    """POST /library-walk/register/ -- process a walk registration."""
+    is_too_fast, timing_message = check_submission_timing(request)
+    if is_too_fast:
+        form = LibraryWalkRegistrationForm(request.POST)
+        form.add_error(None, timing_message)
+        return render(
+            request,
+            "libraries/library_walk.html",
+            {"form": form, "form_loaded_at": timezone.now().timestamp()},
+            status=400,
+        )
+
+    form = LibraryWalkRegistrationForm(request.POST)
+
+    # Belt-and-suspenders honeypot (the mixin also validates this field).
+    if request.POST.get("website_url"):
+        logger.warning("library_walk_honeypot_tripped", extra={"path": request.path})
+        return HttpResponseBadRequest("Invalid submission.")
+
+    if not form.is_valid():
+        return render(
+            request,
+            "libraries/library_walk.html",
+            {"form": form, "form_loaded_at": timezone.now().timestamp()},
+            status=422,
+        )
+
+    registration = form.save()
+
+    # Notify admin -- fail silently so a mail hiccup never breaks a sign-up.
+    # No mail is sent unless ADMIN_EMAIL is configured; this is the hook for
+    # wiring real outbound email later.
+    admin_email = getattr(settings, "ADMIN_EMAIL", "")
+    if admin_email:
+        followup = "Yes" if registration.needs_accessibility_followup else "No"
+        send_email(
+            subject=(
+                f"[Bookworm] Library Walk registration: {registration.name} "
+                f"(party of {registration.party_size})"
+            ),
+            to=admin_email,
+            text_body=(
+                "A new Library Walk registration came in.\n\n"
+                f"Name: {registration.name}\n"
+                f"Email: {registration.email}\n"
+                f"Party size: {registration.party_size}\n"
+                f"Favourite book: {registration.favourite_book or '(none)'}\n"
+                f"Accessibility notes: {registration.accessibility_notes or '(none)'}\n"
+                f"Wants accessibility follow-up: {followup}\n\n"
+                f"Admin: {request.scheme}://{request.get_host()}"
+                f"/admin/libraries/librarywalkregistration/{registration.pk}/change/\n"
+            ),
+            fail_silently=True,
+        )
+
+    logger.info(
+        "library_walk_registration",
+        extra={
+            "registration_id": registration.pk,
+            "party_size": registration.party_size,
+            "accessibility_followup": registration.needs_accessibility_followup,
+        },
+    )
+
+    return redirect("libraries:library_walk_thanks")
+
+
+@require_GET
+def library_walk_thanks(request):
+    """GET /library-walk/thanks/ -- post-registration thank-you page."""
+    return render(request, "libraries/library_walk_thanks.html", {})

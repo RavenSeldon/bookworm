@@ -350,6 +350,7 @@ RATE_LIMIT_SETTINGS = {
     'issue_report':        {'limit': 10, 'period': 3600},                      # 10 per hour
     'geocode_search':      {'limit': 30, 'period': 60},                        # 30 per minute
     'steward_partnership': {'limit': 5,  'period': 3600},                      # 5 per hour
+    'library_walk_register': {'limit': 10, 'period': 3600},                    # 10 per hour
     'here_resolve':        {'limit': 20, 'period': 300, 'escalates': False},   # 20 per 5 min
     'here_log':            {'limit': 20, 'period': 300, 'escalates': False},   # 20 per 5 min
 }
@@ -406,14 +407,18 @@ if os.environ.get('ENABLE_HTTPS', 'false').lower() == 'true':
 # =============================================================================
 # EMAIL (Admin notifications)
 # =============================================================================
-EMAIL_BACKEND = os.environ.get(
-    'EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend'
-)
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Bookworm <noreply@bookworm.app>')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+if RESEND_API_KEY:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.resend.com'
+    EMAIL_PORT = 465
+    EMAIL_USE_SSL = True
+    EMAIL_HOST_USER = 'resend'
+    EMAIL_HOST_PASSWORD = RESEND_API_KEY
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Bookworm <ben@bookworm.guide>')
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', 'Bookworm <ben@bookworm.guide>')
+EMAIL_REPLY_TO = os.environ.get('EMAIL_REPLY_TO', 'ben@bookworm.guide')
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')

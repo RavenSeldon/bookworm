@@ -1,0 +1,1117 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="The Bookworm Free Little Library Walk: a friendly, come-and-go procession through Central Vancouver's Little Free Libraries on Sunday, August 16, 2026. Bring a few books to share.">
+    <meta name="theme-color" content="#1a5f4a">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Bookworm: Free Little Library Walk">
+    <meta property="og:description" content="A friendly neighbourhood walk visiting Little Free Libraries across Central Vancouver. Sunday, August 16, 2026. Join wherever, leave whenever.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
+    <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}/library-walk/">
+
+    <title>Free Little Library Walk -- Bookworm</title>
+
+    <link rel="preload" as="image" href="{% static 'libraries/images/bookworm-hero.webp' %}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+    <!-- Bookworm Shared Design System -->
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <style>
+        /* =================================================================
+           LIBRARY WALK PAGE
+           Page-specific styles only; shared tokens/components are in
+           bookworm.css. Everything is scoped under .walk-page to avoid
+           leaking into other pages.
+           ================================================================= */
+
+        .walk-page { background: white; }
+
+        .walk-section {
+            padding: 4rem 1.25rem;
+        }
+        .walk-section--tint { background: var(--color-neutral-50); }
+        .walk-wrap {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+        .walk-wrap--wide { max-width: 980px; }
+
+        .walk-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-primary-700);
+        }
+        .walk-section-title {
+            font-family: var(--font-display);
+            font-size: clamp(1.6rem, 4.5vw, 2.1rem);
+            font-weight: 600;
+            color: var(--color-neutral-900);
+            margin: 0.5rem 0 1rem;
+            line-height: 1.2;
+        }
+        .walk-lead {
+            font-size: 1.05rem;
+            color: var(--color-neutral-700);
+            line-height: 1.65;
+        }
+
+        /* ---------- HERO ---------- */
+        .walk-hero {
+            position: relative;
+            min-height: 80svh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .walk-hero-bg {
+            position: absolute;
+            inset: 0;
+            background-image: url("{% static 'libraries/images/bookworm-hero.webp' %}");
+            background-size: cover;
+            background-position: center 35%;
+            opacity: 0.95;
+            z-index: 0;
+        }
+        .walk-hero-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to top,
+                rgba(13, 48, 40, 0.94) 0%,
+                rgba(13, 48, 40, 0.78) 38%,
+                rgba(13, 48, 40, 0.35) 70%,
+                rgba(13, 48, 40, 0.18) 100%
+            );
+        }
+        .walk-hero-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 760px;
+            width: min(100%, 760px);
+            width: 100%;
+            margin: 0 auto;
+            padding: clamp(2rem, 5vh, 3rem) 1.25rem;
+        }
+        .walk-hero-logo-link {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 0px) + 1rem);
+            left: calc(env(safe-area-inset-left, 0px) + 1rem);
+            z-index: 2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .walk-hero-mascot {
+            height: 64px;
+            width: auto;
+            margin: 0;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.35));
+        }
+        .walk-hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: var(--color-primary-200);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            margin-bottom: 1.1rem;
+        }
+        .walk-hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 6vw, 3.1rem);
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            line-height: 1.05;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+        .walk-hero-when {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            text-align: center;
+            color: white;
+            margin: 0 0 0.35rem;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+        .walk-hero-when .walk-dot {
+            opacity: 0.6;
+            text-align: center;
+            margin: 0 0.5rem;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+        .walk-hero-tagline {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0.75rem 0 0.4rem;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            max-width: 540px;
+            line-height: 1.6;
+        }
+        .walk-hero-comego {
+            display: inline-block;
+            font-weight: 800;
+            color: var(--color-accent-200);
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            margin-bottom: 1.5rem;
+        }
+        .walk-hero-cta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .walk-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.85rem 1.6rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+        }
+        .walk-btn-primary {
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            color: white;
+            box-shadow: 0 4px 18px rgba(42, 157, 122, 0.35);
+        }
+        .walk-btn-primary:hover {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 26px rgba(42, 157, 122, 0.45);
+        }
+        .walk-btn-ghost {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border: 1.5px solid rgba(255, 255, 255, 0.55);
+        }
+        .walk-btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .walk-btn-outline {
+            background: white;
+            color: var(--color-primary-700);
+            border: 1.5px solid var(--color-primary-600);
+        }
+        .walk-btn-outline:hover {
+            background: var(--color-primary-700);
+            color: white;
+        }
+
+        /* ---------- ABOUT ---------- */
+        .walk-about-grid {
+            display: grid;
+            gap: 1.25rem;
+            margin-top: 2rem;
+        }
+        @media (min-width: 720px) {
+            .walk-about-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .walk-card {
+            background: white;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 1.5rem;
+        }
+        .walk-card h3 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-neutral-900);
+        }
+        .walk-card h3 i { color: var(--color-primary-600); }
+        .walk-bring-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .walk-bring-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 0.3rem 0;
+            color: var(--color-neutral-700);
+        }
+        .walk-bring-list li i {
+            color: var(--color-primary-600);
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+        .walk-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            background: var(--color-accent-100);
+            border-left: 4px solid var(--color-accent-500);
+            border-radius: var(--radius-md);
+            padding: 0.9rem 1.1rem;
+            margin-top: 1.25rem;
+            color: var(--color-neutral-800);
+            font-size: 0.95rem;
+        }
+        .walk-note i {
+            color: var(--color-accent-600);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .walk-note--family { background: var(--color-primary-100); border-left-color: var(--color-primary-600); }
+        .walk-note--family i { color: var(--color-primary-700); }
+
+        /* ---------- MAP ---------- */
+        .walk-map-shell {
+            position: relative;
+            margin-top: 1.75rem;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid var(--color-neutral-200);
+            box-shadow: var(--shadow-md);
+        }
+        #walk-map {
+            height: 460px;
+            width: 100%;
+            background: var(--color-primary-100);
+        }
+        @media (max-width: 576px) {
+            #walk-map { height: 380px; }
+        }
+        .walk-map-legend {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            z-index: 600;
+            background: white;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            padding: 0.75rem 0.9rem;
+            font-size: 0.8rem;
+            max-width: 240px;
+        }
+        .walk-legend-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-neutral-500);
+            margin-bottom: 0.45rem;
+        }
+        .walk-legend-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 2px 0;
+            color: var(--color-neutral-700);
+        }
+        .walk-legend-line {
+            width: 22px;
+            height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .walk-legend-cup { color: var(--color-accent-500); flex-shrink: 0; }
+        .walk-map-fallback {
+            margin-top: 1rem;
+            color: var(--color-neutral-600);
+            font-size: 0.9rem;
+        }
+        .walk-map-actions {
+            margin-top: 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* Leaflet custom pins */
+        .walk-pin { display: flex; align-items: center; justify-content: center; }
+        .walk-pin-dot, .walk-pin-cup {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2.5px solid white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+        }
+        .walk-pin-dot {
+            width: 34px; height: 34px;
+            background: var(--color-primary-500);
+        }
+        .walk-pin-cup {
+            width: 30px; height: 30px;
+            background: var(--color-accent-300);
+        }
+        .walk-pin-dot i, .walk-pin-cup i {
+            transform: rotate(45deg);
+            color: white;
+            font-size: 14px;
+        }
+        .walk-pop-role, .walk-pop-time {
+            font-size: 0.78rem;
+            color: var(--color-primary-500);
+            font-weight: 600;
+        }
+        .walk-pop-note {
+            margin-top: 0.4rem;
+            font-size: 0.82rem;
+            color: var(--color-neutral-600);
+        }
+        .walk-pop-amen { margin-top: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+        /* Amenity pills (shared by map popups + schedule) */
+        .walk-amenity {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 9px;
+            border-radius: var(--radius-full);
+            background: var(--color-neutral-100);
+            color: var(--color-neutral-700);
+        }
+        .walk-amenity-dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        .walk-amenity-water .walk-amenity-dot { background: #2f80c7; }
+        .walk-amenity-restroom .walk-amenity-dot { background: var(--color-primary-600); }
+        .walk-amenity-seating .walk-amenity-dot { background: var(--color-accent-500); }
+
+        /* ---------- SCHEDULE ---------- */
+        .walk-schedule-placeholder {
+            background: white;
+            border: 1px dashed var(--color-neutral-300);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            color: var(--color-neutral-600);
+            text-align: center;
+            margin: 0;
+        }
+        .walk-timeline {
+            list-style: none;
+            counter-reset: stop;
+            margin: 0;
+            padding: 0;
+        }
+        .walk-timeline-item {
+            position: relative;
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 1rem;
+            padding: 0 0 1.4rem 0;
+        }
+        .walk-timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 100px;
+            top: 1.6rem;
+            bottom: -0.2rem;
+            width: 2px;
+            background: var(--color-neutral-200);
+        }
+        .walk-timeline-item:last-child::before { display: none; }
+        .walk-timeline-time {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--color-primary-700);
+            text-align: right;
+            padding-top: 0.1rem;
+        }
+        .walk-timeline-body { position: relative; padding-left: 1.25rem; }
+        .walk-timeline-body::before {
+            content: '';
+            position: absolute;
+            left: -3px;
+            top: 0.35rem;
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: var(--color-primary-500);
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px var(--color-primary-200);
+        }
+        .walk-timeline-place {
+            display: block;
+            font-weight: 600;
+            color: var(--color-neutral-900);
+        }
+        .walk-timeline-note {
+            display: block;
+            font-size: 0.88rem;
+            color: var(--color-neutral-600);
+            margin-top: 0.15rem;
+        }
+        .walk-timeline-amen { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+        /* ---------- REGISTRATION ---------- */
+        .walk-form-card {
+            background: white;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            padding: 2rem;
+            margin-top: 1.75rem;
+        }
+        @media (max-width: 575px) { .walk-form-card { padding: 1.5rem; } }
+        .walk-form-intro {
+            color: var(--color-neutral-700);
+            margin-bottom: 1.5rem;
+        }
+        .walk-field { margin-bottom: 1.35rem; }
+        .walk-field label {
+            display: block;
+            font-weight: 500;
+            color: var(--color-neutral-800);
+            margin-bottom: 0.4rem;
+        }
+        .walk-field .form-text {
+            color: var(--color-neutral-600);
+            font-size: 0.85rem;
+            margin-top: 0.35rem;
+        }
+        .walk-field-check {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            background: var(--color-primary-50);
+            border: 1px solid var(--color-primary-200);
+            border-radius: var(--radius-md);
+            padding: 0.9rem 1.1rem;
+            margin-bottom: 1.35rem;
+        }
+        .walk-field-check .form-check-input { margin-top: 0.2rem; }
+        .walk-field-check label { margin: 0; font-weight: 500; color: var(--color-neutral-800); }
+        .walk-row {
+            display: grid;
+            gap: 1.35rem;
+        }
+        @media (min-width: 560px) {
+            .walk-row { grid-template-columns: 2fr 1fr; }
+        }
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.4rem 0 0;
+        }
+        .errorlist li {
+            color: var(--color-danger);
+            font-size: 0.85rem;
+        }
+        .walk-nonfield {
+            background: var(--color-danger-bg);
+            color: var(--color-danger);
+            border-radius: var(--radius-md);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.95rem;
+        }
+
+        /* ---------- PARTNERS ---------- */
+        .walk-partner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .walk-partner-slot {
+            border: 1px dashed var(--color-neutral-300);
+            border-radius: var(--radius-md);
+            min-height: 84px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-neutral-400);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 0.75rem;
+        }
+        .walk-nsg {
+            margin-top: 1.75rem;
+            background: var(--color-neutral-50);
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            color: var(--color-neutral-700);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+        .walk-nsg .walk-nsg-label {
+            font-weight: 600;
+            color: var(--color-neutral-800);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        /* ---------- FOOTER ---------- */
+        .walk-footer {
+            background: var(--color-primary-900);
+            color: rgba(255,255,255,0.85);
+            padding: 2.5rem 1.25rem;
+            text-align: center;
+        }
+        .walk-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .walk-footer-links a {
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 500;
+        }
+        .walk-footer-links a:hover { color: var(--color-primary-200); text-decoration: underline; }
+        .walk-footer-note {
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.6);
+            max-width: 520px;
+            margin: 0 auto;
+            line-height: 1.55;
+        }
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .walk-page,
+        .walk-page * {
+            box-sizing: border-box;
+        }
+
+        .walk-page img,
+        .walk-page svg,
+        .walk-page canvas,
+        .walk-page iframe {
+            max-width: 100%;
+        }
+
+        /* Accessibility: visible focus + reduced motion */
+        .walk-page a:focus-visible,
+        .walk-page button:focus-visible {
+            outline: 3px solid var(--color-accent-300);
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .walk-page * { transition: none !important; animation: none !important; }
+            .walk-btn:hover { transform: none; }
+        }
+        @media (max-width: 576px) {
+            .walk-hero-mascot {
+                height: 48px;
+            }
+
+            .walk-hero-logo-link {
+                top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+                left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
+            }
+        }
+        @media (max-width: 576px) {
+            .walk-section {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .walk-hero-inner {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .walk-hero-cta {
+                width: 100%;
+            }
+
+            .walk-btn {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="walk-page">
+    <a href="#walk-register" class="visually-hidden-focusable">Skip to registration</a>
+
+    <!-- ============================ HERO ============================ -->
+    <header class="walk-hero">
+        <div class="walk-hero-bg" role="img" aria-label="The Bookworm mascot reading beside a Little Free Library."></div>
+        <a href="{% url 'libraries:landing' %}" class="walk-hero-logo-link" aria-label="Go to Bookworm home">
+            <img src="{% static 'libraries/images/bookworm-landing-logo.png' %}" alt="" class="walk-hero-mascot" aria-hidden="true">
+        </a>
+        <div class="walk-hero-inner">
+            <h1 class="walk-hero-title">Free Little Library Walk</h1>
+            <p class="walk-hero-when">
+                Sunday, August 16, 2026<span class="walk-dot">&middot;</span>10:00am - 3:00pm
+            </p><br>
+            <p class="walk-hero-tagline">
+                A friendly, unhurried procession visiting Little Free Libraries across
+                Central Vancouver. Bring a few books to share, trade, or leave along the way.
+            </p>
+            <span class="walk-hero-comego"><i class="bi bi-arrow-left-right"></i> Join wherever, leave whenever</span>
+            <div class="walk-hero-cta">
+                <a href="#walk-register" class="walk-btn walk-btn-primary"><i class="bi bi-pencil-square"></i> Register</a>
+                <a href="#walk-route" class="walk-btn walk-btn-ghost"><i class="bi bi-map"></i> View the route</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+    <!-- ============================ ABOUT ============================ -->
+    <section class="walk-section" id="walk-about" aria-labelledby="walk-about-title">
+        <div class="walk-wrap">
+            <span class="walk-eyebrow"><i class="bi bi-book"></i> What to expect</span>
+            <h2 class="walk-section-title" id="walk-about-title">A slow walk between little libraries</h2>
+            <p class="walk-lead">
+                Inspired by Jane's Walk, this is a relaxed afternoon spent wandering from one
+                Little Free Library to the next with neighbours. Leave a book if there's room,
+                take one if it catches your eye, snap a shelfie so the next person knows what's
+                inside, and help us discover libraries that aren't on the map yet. There's no
+                set pace and no pressure -- come for one stop or stay for all of them.
+            </p>
+
+            <div class="walk-about-grid">
+                <div class="walk-card">
+                    <h3><i class="bi bi-bag"></i> What to bring</h3>
+                    <ul class="walk-bring-list">
+                        <li><i class="bi bi-book-half"></i> A few books to pass on (only leave one if there's room)</li>
+                        <li><i class="bi bi-droplet"></i> Water -- there are refill points along the way</li>
+                        <li><i class="bi bi-sun"></i> Sun protection: hat, sunscreen, shade-friendly clothes</li>
+                        <li><i class="bi bi-bag-check"></i> Comfortable shoes for a few easy kilometres</li>
+                    </ul>
+                </div>
+                <div class="walk-card">
+                    <h3><i class="bi bi-people"></i> How it runs</h3>
+                    <p style="margin:0 0 0.75rem; color: var(--color-neutral-700);">
+                        We start and finish at VPL Mount Pleasant. Rest stops are come-and-go,
+                        so you can peel off or join back in whenever suits you.
+                    </p>
+                    <p style="margin:0; color: var(--color-neutral-700);">
+                        We've scheduled the walk to avoid the peak afternoon heat. If it turns
+                        extreme, we may postpone or cancel and will email everyone who registered.
+                    </p>
+                </div>
+            </div>
+
+            <div class="walk-note walk-note--family">
+                <i class="bi bi-emoji-smile"></i>
+                <div><strong>Families welcome.</strong> Kids 16 and below must be accompanied by an adult.</div>
+            </div>
+            <div class="walk-note">
+                <i class="bi bi-signpost-2"></i>
+                <div>If turnout is high, we may split into two groups for part of the route and
+                    finish at a second spot nearby -- we'll sort out the details and announce
+                    them at the start.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================ ROUTE MAP ============================ -->
+    <section class="walk-section walk-section--tint" id="walk-route" aria-labelledby="walk-route-title">
+        <div class="walk-wrap walk-wrap--wide">
+            <span class="walk-eyebrow"><i class="bi bi-geo-alt"></i> The route</span>
+            <h2 class="walk-section-title" id="walk-route-title">Where we're walking</h2>
+            <p class="walk-lead">
+                A loop through Central Vancouver, starting and ending at VPL Mount Pleasant.
+                The cups mark rest stops with washrooms, water, and a place to sit.
+            </p>
+
+            <div class="walk-map-shell">
+                <div id="walk-map"></div>
+                <div class="walk-map-legend" id="walk-map-legend" hidden></div>
+            </div>
+            <noscript>
+                <p class="walk-map-fallback">
+                    The interactive route map needs JavaScript. You can still explore every
+                    Little Free Library on the main Bookworm map.
+                </p>
+            </noscript>
+
+            <div class="walk-map-actions">
+                <a href="{% url 'libraries:map' %}" class="walk-btn walk-btn-outline">
+                    <i class="bi bi-map"></i> Open the full Bookworm map
+                </a>
+                <span style="color: var(--color-neutral-600); font-size: 0.9rem;">
+                    Want to add a library you spot on the walk? Do it right from the map.
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================ SCHEDULE ============================ -->
+    <section class="walk-section" id="walk-schedule-section" aria-labelledby="walk-schedule-title">
+        <div class="walk-wrap">
+            <span class="walk-eyebrow"><i class="bi bi-clock"></i> The plan</span>
+            <h2 class="walk-section-title" id="walk-schedule-title">Stop by stop</h2>
+            <div id="walk-schedule">
+                <p class="walk-schedule-placeholder">
+                    Schedule coming soon -- we're walking the route to time it.
+                    Check back closer to the date.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================ REGISTRATION ============================ -->
+    <section class="walk-section walk-section--tint" id="walk-register" aria-labelledby="walk-register-title">
+        <div class="walk-wrap">
+            <span class="walk-eyebrow"><i class="bi bi-pencil-square"></i> Save your spot</span>
+            <h2 class="walk-section-title" id="walk-register-title">Register for the walk</h2>
+            <p class="walk-form-intro">
+                Optional, and walk-ups are always welcome -- registering just helps us plan
+                numbers and lets us reach you if the weather forces a change.
+            </p>
+
+            <div class="walk-form-card">
+                {% if form.non_field_errors %}
+                    <div class="walk-nonfield" role="alert">
+                        {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                    </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'libraries:library_walk_register' %}" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="_form_loaded_at" value="{{ form_loaded_at }}">
+
+                    {# Honeypot: wired up by HoneypotMixin, hidden via .hp-field #}
+                    <div class="hp-field" aria-hidden="true">
+                        <label for="{{ form.website_url.id_for_label }}">Leave this field empty</label>
+                        {{ form.website_url }}
+                    </div>
+
+                    <div class="walk-row">
+                        <div class="walk-field">
+                            <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {{ form.name.errors }}
+                        </div>
+                        <div class="walk-field">
+                            <label for="{{ form.party_size.id_for_label }}">{{ form.party_size.label }}</label>
+                            {{ form.party_size }}
+                            <div class="form-text">Including you. A rough number is fine.</div>
+                            {{ form.party_size.errors }}
+                        </div>
+                    </div>
+
+                    <div class="walk-field">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        <div class="form-text">Only used to reach you about this walk for any updates and notices.</div>
+                        {{ form.email.errors }}
+                    </div>
+
+                    <div class="walk-field">
+                        <label for="{{ form.favourite_book.id_for_label }}">{{ form.favourite_book.label }}</label>
+                        {{ form.favourite_book }}
+                        <div class="form-text">Optional. It'll be used as a conversation starter during the event.</div>
+                        {{ form.favourite_book.errors }}
+                    </div>
+
+                    <div class="walk-field">
+                        <label for="{{ form.accessibility_notes.id_for_label }}">{{ form.accessibility_notes.label }}</label>
+                        {{ form.accessibility_notes }}
+                        <div class="form-text">Tell us about any accessibility needs and we'll reach out personally to make the day work for you.</div>
+                        {{ form.accessibility_notes.errors }}
+                    </div>
+
+                    <div class="walk-field-check">
+                        {{ form.needs_accessibility_followup }}
+                        <label for="{{ form.needs_accessibility_followup.id_for_label }}">{{ form.needs_accessibility_followup.label }}</label>
+                    </div>
+
+                    <button type="submit" class="walk-btn walk-btn-primary">
+                        <i class="bi bi-check2-circle"></i> Count me in
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================ PARTNERS ============================ -->
+    <section class="walk-section" id="walk-partners" aria-labelledby="walk-partners-title">
+        <div class="walk-wrap">
+            <span class="walk-eyebrow"><i class="bi bi-heart"></i> With thanks</span>
+            <h2 class="walk-section-title" id="walk-partners-title">Partners &amp; supporters</h2>
+            <p class="walk-lead">
+                Local shops, libraries, and stewards help make this walk possible.
+                More to come -- check back as we confirm them.
+            </p>
+
+            <div class="walk-partner-grid" aria-label="Partner logos coming soon">
+                <div class="walk-partner-slot">Partner<br>coming soon</div>
+                <div class="walk-partner-slot">Partner<br>coming soon</div>
+                <div class="walk-partner-slot">Partner<br>coming soon</div>
+                <div class="walk-partner-slot">Partner<br>coming soon</div>
+            </div>
+
+            <div class="walk-nsg">
+                <span class="walk-nsg-label">Funding</span>
+                Bookworm is a free community project. This work is funded by a Neighbourhood
+                Small Grant through the Vancouver Foundation, administered by Mount Pleasant
+                and Little Mountain Neighbourhood Houses.
+            </div>
+        </div>
+    </section>
+    </main>
+
+    <!-- ============================ FOOTER ============================ -->
+    <footer class="walk-footer">
+        <div class="walk-footer-links">
+            <a href="{% url 'libraries:map' %}"><i class="bi bi-map"></i> The Bookworm map</a>
+            <a href="https://www.instagram.com/bookworm_guide" target="_blank" rel="noopener"><i class="bi bi-instagram"></i> bookworm_guide</a>
+            <a href="mailto:ben@bookworm.guide"><i class="bi bi-envelope"></i> ben@bookworm.guide</a>
+        </div>
+        <p class="walk-footer-note">
+            Bookworm: a free, community-built map of Little Free Libraries across British Columbia.
+        </p>
+    </footer>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Route + stop config (hand-editable; the ONLY file to change the route) -->
+    <script src="{% static 'libraries/js/library-walk-config.js' %}"></script>
+
+    <script>
+        (function () {
+            "use strict";
+
+            var cfg = window.LIBRARY_WALK_CONFIG;
+            if (!cfg) { return; }
+
+            function escapeHtml(s) {
+                return String(s == null ? "" : s)
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            }
+
+            function hasWindow(s) {
+                return s && s.window && String(s.window).trim().length > 0;
+            }
+
+            function amenityPills(stop) {
+                var out = "";
+                if (stop.water) { out += pill("water", "Water"); }
+                if (stop.restroom) { out += pill("restroom", "Washroom"); }
+                if (stop.seating) { out += pill("seating", "Seating"); }
+                return out;
+            }
+            function pill(kind, label) {
+                return '<span class="walk-amenity walk-amenity-' + kind + '">' +
+                       '<span class="walk-amenity-dot"></span>' + label + '</span>';
+            }
+
+            // ---------------- MAP ----------------
+            var mapEl = document.getElementById("walk-map");
+            if (mapEl && window.L) {
+                var map = L.map("walk-map", { scrollWheelZoom: false });
+
+                L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: "abcd",
+                    maxZoom: 19
+                }).addTo(map);
+
+                var pts = [];
+                var legs = cfg.route || [];
+
+                if (cfg.splitView) {
+                    legs.forEach(function (leg) {
+                        if (!leg.coords || !leg.coords.length) { return; }
+                        L.polyline(leg.coords, { color: leg.color, weight: 5, opacity: 0.85 }).addTo(map);
+                        leg.coords.forEach(function (c) { pts.push(c); });
+                    });
+                } else {
+                    // Join legs into one loop: first leg forward, the rest reversed
+                    // so the line closes back to the start.
+                    var loop = [];
+                    legs.forEach(function (leg, i) {
+                        if (!leg.coords || !leg.coords.length) { return; }
+                        var seg = (i === 0) ? leg.coords.slice() : leg.coords.slice().reverse();
+                        loop = loop.concat(seg);
+                    });
+                    if (loop.length) {
+                        L.polyline(loop, { color: cfg.brandColor, weight: 5, opacity: 0.9 }).addTo(map);
+                        loop.forEach(function (c) { pts.push(c); });
+                    }
+                }
+
+                // Start / finish marker
+                if (cfg.start) {
+                    var startIcon = L.divIcon({
+                        className: "walk-pin walk-pin-start",
+                        html: '<span class="walk-pin-dot"><i class="bi bi-flag-fill"></i></span>',
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 34],
+                        popupAnchor: [0, -32]
+                    });
+                    var roleTxt = cfg.splitView ? "Start -- we gather here" : "Start and finish";
+                    var startHtml = "<strong>" + escapeHtml(cfg.start.name) + "</strong>" +
+                        '<br><span class="walk-pop-role">' + roleTxt + "</span>" +
+                        (cfg.start.note ? '<div class="walk-pop-note">' + escapeHtml(cfg.start.note) + "</div>" : "");
+                    L.marker([cfg.start.lat, cfg.start.lng], { icon: startIcon, title: cfg.start.name })
+                        .addTo(map).bindPopup(startHtml);
+                    pts.push([cfg.start.lat, cfg.start.lng]);
+                }
+
+                // Rest-stop cup markers
+                (cfg.restStops || []).forEach(function (stop) {
+                    var cupIcon = L.divIcon({
+                        className: "walk-pin walk-pin-stop",
+                        html: '<span class="walk-pin-cup"><i class="bi bi-cup-hot-fill"></i></span>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -28]
+                    });
+                    var html = "<strong>" + escapeHtml(stop.name) + "</strong>";
+                    if (hasWindow(stop)) {
+                        html += '<br><span class="walk-pop-time">' + escapeHtml(stop.window) + "</span>";
+                    }
+                    var amen = amenityPills(stop);
+                    if (amen) { html += '<div class="walk-pop-amen">' + amen + "</div>"; }
+                    if (stop.note) { html += '<div class="walk-pop-note">' + escapeHtml(stop.note) + "</div>"; }
+                    L.marker([stop.lat, stop.lng], { icon: cupIcon, title: stop.name })
+                        .addTo(map).bindPopup(html);
+                    pts.push([stop.lat, stop.lng]);
+                });
+
+                if (pts.length) {
+                    map.fitBounds(pts, { padding: [40, 40] });
+                } else {
+                    map.setView([49.2554, -123.1009], 14);
+                }
+
+                // Legend only matters in split view (two colored legs).
+                var legendEl = document.getElementById("walk-map-legend");
+                if (legendEl && cfg.splitView) {
+                    var lh = '<div class="walk-legend-title">Two groups</div>';
+                    legs.forEach(function (leg) {
+                        var label = leg.leg === "west" ? "West group (left of Main)"
+                                  : leg.leg === "east" ? "East group (right of Main)"
+                                  : leg.leg;
+                        lh += '<div class="walk-legend-row"><span class="walk-legend-line" style="background:' +
+                              leg.color + '"></span>' + escapeHtml(label) + "</div>";
+                    });
+                    if (cfg.altEndpoint) {
+                        lh += '<div class="walk-legend-row"><i class="bi bi-cup-hot-fill walk-legend-cup"></i>Both finish at ' +
+                              escapeHtml(cfg.altEndpoint.name) + "</div>";
+                    }
+                    legendEl.innerHTML = lh;
+                    legendEl.hidden = false;
+                }
+
+                setTimeout(function () { map.invalidateSize(); }, 200);
+            }
+
+            // ---------------- SCHEDULE ----------------
+            var schedEl = document.getElementById("walk-schedule");
+            if (schedEl) {
+                var stops = cfg.restStops || [];
+                var anyWindow = stops.some(hasWindow);
+                if (stops.length && anyWindow) {
+                    var html = '<ol class="walk-timeline">';
+                    if (cfg.start) {
+                        html += timelineItem("10:00", cfg.start.name,
+                            "Gather, grab a name tag, and set off together.", null);
+                    }
+                    stops.forEach(function (s) {
+                        html += timelineItem(hasWindow(s) ? s.window : "Time TBD", s.name, s.note, s);
+                    });
+                    if (cfg.start) {
+                        var finishName = (cfg.splitView && cfg.altEndpoint) ? cfg.altEndpoint.name : cfg.start.name;
+                        html += timelineItem("Finish", finishName,
+                            cfg.splitView ? "Both groups wrap up here." : "Loop closes back where we started.", null);
+                    }
+                    html += "</ol>";
+                    schedEl.innerHTML = html;
+                }
+                // else: leave the server-rendered "coming soon" placeholder in place.
+            }
+
+            function timelineItem(timeLabel, place, note, stop) {
+                var amen = "";
+                if (stop) {
+                    var p = amenityPills(stop);
+                    if (p) { amen = '<div class="walk-timeline-amen">' + p + "</div>"; }
+                }
+                return '<li class="walk-timeline-item">' +
+                    '<span class="walk-timeline-time">' + escapeHtml(timeLabel) + "</span>" +
+                    '<div class="walk-timeline-body">' +
+                    '<span class="walk-timeline-place">' + escapeHtml(place) + "</span>" +
+                    (note ? '<span class="walk-timeline-note">' + escapeHtml(note) + "</span>" : "") +
+                    amen + "</div></li>";
+            }
+        })();
+    </script>
+
+    <script>
+        {% if form.errors %}
+        (function () {
+            var el = document.getElementById("walk-register");
+            if (el) { el.scrollIntoView({ behavior: "auto", block: "start" }); }
+        })();
+        {% endif %}
+    </script>
+</body>
+</html>
