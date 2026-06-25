@@ -50,10 +50,13 @@
         .hero {
             min-height: 100vh;
             min-height: 100dvh;
+            max-height: none !important;
+            height: auto !important;
             display: flex;
             flex-direction: column;
             position: relative;
             overflow-x: clip;
+            overflow-y: visible;
             background: #0d3028;
         }
 
@@ -62,6 +65,7 @@
             position: absolute;
             inset: 0;
             min-height: 100%;
+            height: auto !important;
             background-image: url("{% static 'libraries/images/bookworm-hero.webp' %}") !important;
             background-size: cover;
             background-position: center 30%;
@@ -122,7 +126,7 @@
             color: white;
             margin: 0 0 0.75rem 0;
             line-height: 1.12;
-            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
         .hero-tagline {
@@ -131,6 +135,7 @@
             margin: 0 0 1.35rem 0;
             line-height: 1.6;
             max-width: 440px;
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
         }
 
         .cta-button {
@@ -167,7 +172,8 @@
            STATS STRIP
            ================================================================= */
         .stats-section {
-            position: relative;
+            position: relative !important;
+            margin-top: auto;
             z-index: 3;
             flex: 0 0 auto;
             background: linear-gradient(
@@ -178,14 +184,14 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border-top: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 1.35rem 1rem 1.65rem;
+            padding: 1rem 1rem 1.25rem;
         }
 
         .stats-section::after {
             content: '';
             position: absolute;
-            bottom: -2rem;
-            height: 2rem;
+            bottom: -1.25rem;
+            height: 1.25rem;
             left: 0;
             right: 0;
             z-index: -1;
@@ -236,7 +242,7 @@
         .how-section {
             position: relative;
             z-index: 2;
-            padding: 5rem 1.5rem 4rem;
+            padding: 6rem 1rem 4rem;
             background: white;
         }
 
@@ -357,6 +363,7 @@
             align-items: center;
             gap: 0.75rem;
             width: 100%;
+            margin-top: clamp(1.5rem, 8vh, 6rem);
         }
         .event-pill {
             display: inline-flex;
