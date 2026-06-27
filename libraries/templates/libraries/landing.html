@@ -49,7 +49,7 @@
            ================================================================= */
         .hero {
             min-height: 100vh;
-            min-height: 100dvh;
+            min-height: 100svh;
             max-height: none !important;
             height: auto !important;
             display: flex;
@@ -58,6 +58,7 @@
             overflow-x: clip;
             overflow-y: visible;
             background: #0d3028;
+            margin-bottom: 3rem;
         }
 
         /* Background image */
@@ -71,6 +72,7 @@
             background-position: center 30%;
             background-repeat: no-repeat;
             z-index: 0;
+
         }
 
         /* Dark gradient overlay for text readability */
@@ -434,6 +436,30 @@
 
         .landing-footer a:hover { text-decoration: underline; }
 
+        .landing-footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.9rem 1.25rem;
+            margin-top: 0.85rem;
+        }
+
+        .landing-footer-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 600;
+        }
+
+        .landing-footer-note {
+            max-width: 560px;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            line-height: 1.55;
+        }
+
+
         /* =================================================================
            DESKTOP — side-by-side hero
            ================================================================= */
@@ -471,6 +497,10 @@
         @media (min-width: 1024px) {
             .hero-text-panel {
                 padding: 4rem 4rem 3rem;
+            }
+
+            .hero-bg {
+                background-position: center;
             }
 
             .hero-title {
@@ -598,14 +628,17 @@
 
     <!-- Footer -->
     <footer class="landing-footer">
-        <p>
+        <p class="landing-footer-note">
            Bookworm: Built with <i class="bi bi-hearts" style="color: var(--color-primary-500);"></i> for book lovers everywhere
         </p>
-        <p>
-            <a href="https://littlefreelibrary.org" target="_blank" rel="noopener">
-                Learn about Little Free Library&reg;
+        <div class="landing-footer-links">
+            <a href="https://www.instagram.com/bookworm_guide" target="_blank" rel="noopener" aria-label="Follow Bookworm on Instagram">
+                <i class="bi bi-instagram"></i> bookworm_guide
             </a>
-        </p>
+            <a href="https://littlefreelibrary.org" target="_blank" rel="noopener">
+                Little Free Library&reg;
+            </a>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
