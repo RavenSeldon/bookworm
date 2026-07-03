@@ -924,9 +924,23 @@
         // Load Libraries from GeoJSON
         // =================================================================
         let retryTimeout = null;
+        // Monotonic token: each load captures the current value, and a
+        // response is only applied if no newer load has started since.
+        // Prevents overlapping fetches from resolving out of order and
+        // repopulating the map with a stale bbox.
+        let loadEpoch = 0;
 
         async function loadLibraries() {
-            if (map._popup && map._popup.isOpen()) return;
+            if (map._popup && map._popup.isOpen()) {
+                // Defer instead of drop: refresh once the popup closes so
+                // the map doesn't sit on stale markers. Leaflet dedupes
+                // repeat registrations of the same handler, and the
+                // debounce collapses any that get through.
+                map.once('popupclose', debouncedLoadLibraries);
+                return;
+            }
+
+            const epoch = ++loadEpoch;
 
             try {
                 // Get current map bounds with a small buffer (10%)
@@ -961,6 +975,19 @@
                 if (retryTimeout) {
                     clearTimeout(retryTimeout);
                     retryTimeout = null;
+                }
+
+                // A newer load started while this one was awaiting the
+                // network — drop this response; the newer one will apply.
+                if (epoch !== loadEpoch) return;
+
+                // A popup may have opened while the request was in flight.
+                // clearLayers() would remove the marker it's anchored to,
+                // forcing the popup shut — re-check the guard here, at the
+                // moment that matters, and defer the refresh instead.
+                if (map._popup && map._popup.isOpen()) {
+                    map.once('popupclose', debouncedLoadLibraries);
+                    return;
                 }
 
                 markers.clearLayers();
