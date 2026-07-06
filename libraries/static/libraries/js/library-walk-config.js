@@ -952,14 +952,14 @@ window.LIBRARY_WALK_CONFIG = {
   // then east side back up). The schedule renders in this order.
   // window: "HH:MM - HH:MM" once timed, or null for "coming soon".
   restStops: [
-    { name: "Federal Store",       lat: 49.261945641, lng: -123.103190455, water: true,  restroom: true,  seating: true,  window: null, note: "Corner store and cafe. Snacks, coffee, washroom." },
-    { name: "Mount Pleasant Park", lat: 49.257467880, lng: -123.106089931, water: true,  restroom: false, seating: true,  window: null, note: "A green breather. Benches and a seasonal water fountain." },
-    { name: "The Mighty Oak",      lat: 49.254598612, lng: -123.109574115, water: true,  restroom: true,  seating: true,  window: null, note: "Cafe stop with room to sit and regroup." },
-    { name: "Aperture Cafe",       lat: 49.248396483, lng: -123.100846202, water: true,  restroom: true,  seating: true,  window: null, note: "The southern turn. A rest stop on the single route -- and the finish line if we split into two groups." },
-    { name: "Earnest Ice Cream",   lat: 49.249356811, lng: -123.089881340, water: true,  restroom: true,  seating: true,  window: null, note: "Ice cream earned. Washroom and a place to sit." },
-    { name: "Prince Edward Park",  lat: 49.251934001, lng: -123.096804111, water: true,  restroom: true,  seating: true,  window: null, note: "Park stop with washrooms and benches." },
-    { name: "Forecast Cafe",       lat: 49.258484950, lng: -123.100873028, water: true,  restroom: true,  seating: true,  window: null, note: "Cafe stop on the way back north." },
-    { name: "AM Cafe",             lat: 49.262244965, lng: -123.094725408, water: true,  restroom: true,  seating: true,  window: null, note: "Last stop before we close the loop back at VPL." }
+    { name: "Federal Store",       lat: 49.261945641, lng: -123.103190455, water: true,  restroom: true,  seating: true,  window: "10:25 - 10:35", note: "Corner store and cafe. Snacks, coffee, washroom." },
+    { name: "Mount Pleasant Park", lat: 49.257467880, lng: -123.106089931, water: true,  restroom: false, seating: true,  window: "10:45 - 10:55", note: "A green breather. Benches and a seasonal water fountain." },
+    { name: "The Mighty Oak",      lat: 49.254598612, lng: -123.109574115, water: true,  restroom: true,  seating: true,  window: "11:10 - 11:25", note: "Cafe stop with room to sit and regroup." },
+    { name: "Aperture Cafe",       lat: 49.248396483, lng: -123.100846202, water: true,  restroom: true,  seating: true,  window: "11:55 - 12:15", note: "The southern turn. A rest stop on the single route -- and the finish line if we split into two groups." },
+    { name: "Earnest Ice Cream",   lat: 49.249356811, lng: -123.089881340, water: true,  restroom: true,  seating: true,  window: "12:45 - 1:10", note: "Ice cream earned. Washroom and a place to sit." },
+    { name: "Prince Edward Park",  lat: 49.251934001, lng: -123.096804111, water: true,  restroom: true,  seating: true,  window: "1:25 - 1:35", note: "Park stop with washrooms and benches." },
+    { name: "Forecast Cafe",       lat: 49.258484950, lng: -123.100873028, water: true,  restroom: true,  seating: true,  window: "1:55 - 2:10", note: "Cafe stop on the way back north." },
+    { name: "AM Cafe",             lat: 49.262244965, lng: -123.094725408, water: true,  restroom: true,  seating: true,  window: "2:30 - 2:50", note: "Last stop before we close the loop back at VPL." }
     ],
 
   // Stored for the split contingency only. NOT drawn as its own marker in the
