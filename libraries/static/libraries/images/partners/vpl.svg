@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="VPL logo">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <rect x="57" y="195" width="121" height="121" fill="#307FE2"/>
+  <rect x="196" y="195" width="120" height="121" fill="#F93822"/>
+  <rect x="334" y="195" width="121" height="121" fill="#FFB600"/>
+  <path fill="#ffffff" d="M82 218 L101 218 L117 267 L133 218 L151 218 L125 292 L108 292 Z"/>
+  <path fill="#ffffff" fill-rule="evenodd" d="
+    M224 218 H263
+    C278 218 288 229 288 245
+    C288 262 276 273 259 273
+    H242 L241 293 H224 Z
+    M242 235 V255 H262
+    C269 255 272 251 272 245
+    C272 239 268 235 262 235 Z"/>
+  <path fill="#ffffff" d="M366 218 H383 V274 H422 V293 H366 Z"/>
+</svg>

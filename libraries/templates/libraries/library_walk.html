@@ -584,6 +584,34 @@
             text-align: center;
             padding: 0.75rem;
         }
+        .walk-partner-card {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-md);
+            min-height: 96px;               /* even rows regardless of logo shape */
+            padding: 1rem 1.25rem;          /* breathing room around the logo */
+            text-decoration: none;
+            transition: transform var(--transition-fast),
+                        box-shadow var(--transition-fast),
+                        border-color var(--transition-fast);
+        }
+
+        a.walk-partner-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+            border-color: var(--color-neutral-300);
+        }
+
+        .walk-partner-card img {
+            max-height: 56px;               /* cap the LOGO, not just the tile */
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
         .walk-nsg {
             margin-top: 1.75rem;
             background: var(--color-neutral-50);
@@ -905,14 +933,39 @@
             <h2 class="walk-section-title" id="walk-partners-title">Partners &amp; supporters</h2>
             <p class="walk-lead">
                 Local shops, libraries, and stewards help make this walk possible.
-                More to come -- check back as we confirm them.
             </p>
 
-            <div class="walk-partner-grid" aria-label="Partner logos coming soon">
-                <div class="walk-partner-slot">Partner<br>coming soon</div>
-                <div class="walk-partner-slot">Partner<br>coming soon</div>
-                <div class="walk-partner-slot">Partner<br>coming soon</div>
-                <div class="walk-partner-slot">Partner<br>coming soon</div>
+            <div class="walk-partner-grid" aria-label="Walk Partners">
+                <a class="walk-partner-card" href="https://amcafe.ca/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/am-cafe.png' %}" alt="AM Café" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://www.aperturecoffeebar.com/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/aperture.svg' %}" alt="Aperture Coffee Bar" loading="lazy">
+                </a>
+                 <a class="walk-partner-card" href="https://www.bookmarkstore.ca/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/bookmark_logo.svg' %}" alt="Bookmark Friends of VPL" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://earnesticecream.com" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/earnest.png' %}" alt="Earnest Ice Cream" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://federalstore.ca" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/federal_store.jpg' %}" alt="Federal Store" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://forecastcoffee.ca/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/forecast.svg' %}" alt="Forecast Coffee Bar" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://www.massybooks.com/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/massy.jpg' %}" alt="Massy Books" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://themightyoak.ca/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/the_mighty_oak.png' %}" alt="The Mighty Oak" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://pulpfictionbooksvancouver.com/" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/pulpfiction.svg' %}" alt="Pulp Fiction Books" loading="lazy">
+                </a>
+                <a class="walk-partner-card" href="https://www.vpl.ca/branches/mount-pleasant" target="_blank" rel="noopener">
+                    <img src="{% static 'libraries/images/partners/vpl.svg' %}" alt="VPL Mt. Pleasant" loading="lazy">
+                </a>
             </div>
 
             <div class="walk-nsg">
