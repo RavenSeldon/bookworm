@@ -745,7 +745,7 @@
             </p>
             <span class="walk-hero-comego"><i class="bi bi-arrow-left-right"></i> Join wherever, leave whenever</span>
             <div class="walk-hero-cta">
-                <a href="#walk-register" class="walk-btn walk-btn-primary"><i class="bi bi-pencil-square"></i> Register</a>
+                <a href="#walk-register" class="walk-btn walk-btn-primary"><i class="bi bi-pencil-square"></i> Registration Closed</a>
                 <a href="#walk-route" class="walk-btn walk-btn-ghost"><i class="bi bi-map"></i> View the route</a>
             </div>
         </div>
@@ -857,72 +857,10 @@
             <span class="walk-eyebrow"><i class="bi bi-pencil-square"></i> Save your spot</span>
             <h2 class="walk-section-title" id="walk-register-title">Register for the walk</h2>
             <p class="walk-form-intro">
-                Optional, and walk-ups are always welcome -- registering just helps us plan
-                numbers and lets us reach you if the weather forces a change.
+                Registration is closed! Thanks everyone who participated!
             </p>
 
-            <div class="walk-form-card">
-                {% if form.non_field_errors %}
-                    <div class="walk-nonfield" role="alert">
-                        {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
-                    </div>
-                {% endif %}
 
-                <form method="post" action="{% url 'libraries:library_walk_register' %}" novalidate>
-                    {% csrf_token %}
-                    <input type="hidden" name="_form_loaded_at" value="{{ form_loaded_at }}">
-
-                    {# Honeypot: wired up by HoneypotMixin, hidden via .hp-field #}
-                    <div class="hp-field" aria-hidden="true">
-                        <label for="{{ form.website_url.id_for_label }}">Leave this field empty</label>
-                        {{ form.website_url }}
-                    </div>
-
-                    <div class="walk-row">
-                        <div class="walk-field">
-                            <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
-                            {{ form.name }}
-                            {{ form.name.errors }}
-                        </div>
-                        <div class="walk-field">
-                            <label for="{{ form.party_size.id_for_label }}">{{ form.party_size.label }}</label>
-                            {{ form.party_size }}
-                            <div class="form-text">Including you. A rough number is fine.</div>
-                            {{ form.party_size.errors }}
-                        </div>
-                    </div>
-
-                    <div class="walk-field">
-                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-                        {{ form.email }}
-                        <div class="form-text">Only used to reach you about this walk for any updates and notices.</div>
-                        {{ form.email.errors }}
-                    </div>
-
-                    <div class="walk-field">
-                        <label for="{{ form.favourite_book.id_for_label }}">{{ form.favourite_book.label }}</label>
-                        {{ form.favourite_book }}
-                        <div class="form-text">Optional. It'll be used as a conversation starter during the event.</div>
-                        {{ form.favourite_book.errors }}
-                    </div>
-
-                    <div class="walk-field">
-                        <label for="{{ form.accessibility_notes.id_for_label }}">{{ form.accessibility_notes.label }}</label>
-                        {{ form.accessibility_notes }}
-                        <div class="form-text">Tell us about any accessibility needs and we'll reach out personally to make the day work for you.</div>
-                        {{ form.accessibility_notes.errors }}
-                    </div>
-
-                    <div class="walk-field-check">
-                        {{ form.needs_accessibility_followup }}
-                        <label for="{{ form.needs_accessibility_followup.id_for_label }}">{{ form.needs_accessibility_followup.label }}</label>
-                    </div>
-
-                    <button type="submit" class="walk-btn walk-btn-primary">
-                        <i class="bi bi-check2-circle"></i> Count me in
-                    </button>
-                </form>
-            </div>
         </div>
     </section>
 
