@@ -112,6 +112,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'libraries.context_processors.map_settings',
             ],
         },
     },
@@ -199,6 +200,36 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+
+# =============================================================================
+# BASEMAP TILES
+# =============================================================================
+# CARTO began requiring an API key for its raster (PNG) basemaps in Aug 2026;
+# unkeyed requests are served with a repeating "API KEY REQUIRED" watermark.
+# Keys are free, issued without an approval queue, 5M tile requests/month:
+#   https://carto.com/basemaps/apikey/
+#
+# Every Leaflet map in the app reads TILE_URL from here, via the
+# libraries.context_processors.map_settings context processor. Changing the
+# basemap is one edit in this file, not a hunt through templates.
+#
+# NOTE: CARTO is retiring raster basemaps in favour of vector tiles, which
+# would mean MapLibre GL rather than Leaflet. Deferred; see project notes.
+# =============================================================================
+
+CARTO_KEY = os.environ.get('CARTO_KEY', '')
+
+TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+if CARTO_KEY:
+    TILE_URL += '?key=' + CARTO_KEY
+
+TILE_SUBDOMAINS = 'abcd'
+TILE_MAX_ZOOM = 19
+TILE_ATTRIBUTION = (
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> '
+    'contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+)
 
 
 # =============================================================================

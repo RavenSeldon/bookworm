@@ -876,10 +876,10 @@
         L.control.zoom({ position: 'topright' }).addTo(map);
 
         // Add tile layer (CartoDB Voyager - cleaner look)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
+        L.tileLayer('{{ TILE_URL|escapejs }}', {
+            attribution: '{{ TILE_ATTRIBUTION|escapejs }}',
+            subdomains: '{{ TILE_SUBDOMAINS|escapejs }}',
+            maxZoom: {{ TILE_MAX_ZOOM }}
         }).addTo(map);
 
         // =================================================================
@@ -1287,9 +1287,10 @@
 
             submitLocationPicker = L.map('location-picker-map').setView([center.lat, center.lng], 14);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap © CARTO',
-                maxZoom: 19
+            L.tileLayer('{{ TILE_URL|escapejs }}', {
+                attribution: '{{ TILE_ATTRIBUTION|escapejs }}',
+                subdomains: '{{ TILE_SUBDOMAINS|escapejs }}',
+                maxZoom: {{ TILE_MAX_ZOOM }}
             }).addTo(submitLocationPicker);
 
             submitLocationPicker.on('click', function(e) {
