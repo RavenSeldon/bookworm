@@ -31,6 +31,27 @@ class Library(models.Model):
         blank=True,
         help_text="Accessibility notes, landmarks, special features"
     )
+
+    class StopType(models.TextChoices):
+        """What kind of stop this is. Drives the map pin glyph shape.
+
+        Orthogonal to freshness, which drives the pin colour. Adding a
+        member here also needs a glyph symbol in _pin_sprite.html and a
+        STOP_TYPE_GLYPHS entry in map.html, or it falls back to "other".
+        """
+        STANDARD = "standard", "Standard library"
+        YARN = "yarn", "Yarn library"
+        ART = "art", "Art library"
+        FRIDGE = "fridge", "Community fridge / pantry"
+        OTHER = "other", "Other"
+
+    stop_type = models.CharField(
+        max_length=16,
+        choices=StopType.choices,
+        default=StopType.STANDARD,
+        db_index=True,
+        help_text="Kind of stop. Sets the map pin glyph; colour stays freshness."
+    )
     location = models.PointField(
         srid=4326,  # WGS84 - standard GPS coordinate system
         help_text="Geographic coordinates of the library"

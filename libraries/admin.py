@@ -147,6 +147,7 @@ class LibraryAdmin(GISModelAdmin):
 
     list_display = [
         'name_display',
+        'stop_type',
         'is_verified',
         'is_active',
         'freshness_badge',
@@ -157,6 +158,7 @@ class LibraryAdmin(GISModelAdmin):
         'created_at',
     ]
     list_filter = [
+        'stop_type',
         'is_verified',
         'is_active',
         FreshnessFilter,
@@ -167,11 +169,24 @@ class LibraryAdmin(GISModelAdmin):
     search_fields = ['name', 'description', 'submitted_by_email']
     readonly_fields = ['created_at', 'last_updated', 'freshness_badge', 'slug']
     inlines = [ShelfieInline, IssueReportInline]
-    actions = ['approve_libraries', 'deactivate_libraries', 'reactivate_libraries']
+    # Edit stop_type straight from the changelist, many rows per save. Safe
+    # here because stop_type is not the first list_display column, so it does
+    # not collide with list_display_links.
+    list_editable = ['stop_type']
+    actions = [
+        'approve_libraries',
+        'deactivate_libraries',
+        'reactivate_libraries',
+        'set_type_standard',
+        'set_type_yarn',
+        'set_type_art',
+        'set_type_fridge',
+        'set_type_other',
+    ]
 
     fieldsets = [
         (None, {
-            'fields': ['name', 'description', 'location']
+            'fields': ['name', 'description', 'stop_type', 'location']
         }),
         ('Status', {
             'fields': ['is_verified', 'is_active', 'freshness_badge']
@@ -252,6 +267,42 @@ class LibraryAdmin(GISModelAdmin):
     def reactivate_libraries(self, request, queryset):
         updated = queryset.filter(is_active=False).update(is_active=True)
         self.message_user(request, f"{updated} library/libraries reactivated.")
+
+    # -------------------------------------------------------------------
+    # Bulk stop_type assignment
+    # -------------------------------------------------------------------
+    # These set the map pin glyph only. They never touch freshness, which is
+    # derived from last_updated, so .update() here cannot disturb the colour
+    # ramp. Rows already of the target type are excluded so the count
+    # reported back is the number actually changed.
+
+    def _set_stop_type(self, request, queryset, stop_type):
+        label = Library.StopType(stop_type).label
+        updated = queryset.exclude(stop_type=stop_type).update(stop_type=stop_type)
+        self.message_user(
+            request,
+            f"{updated} library/libraries set to {label}."
+        )
+
+    @admin.action(description="Set type: Standard library")
+    def set_type_standard(self, request, queryset):
+        self._set_stop_type(request, queryset, Library.StopType.STANDARD)
+
+    @admin.action(description="Set type: Yarn library")
+    def set_type_yarn(self, request, queryset):
+        self._set_stop_type(request, queryset, Library.StopType.YARN)
+
+    @admin.action(description="Set type: Art library")
+    def set_type_art(self, request, queryset):
+        self._set_stop_type(request, queryset, Library.StopType.ART)
+
+    @admin.action(description="Set type: Community fridge / pantry")
+    def set_type_fridge(self, request, queryset):
+        self._set_stop_type(request, queryset, Library.StopType.FRIDGE)
+
+    @admin.action(description="Set type: Other")
+    def set_type_other(self, request, queryset):
+        self._set_stop_type(request, queryset, Library.StopType.OTHER)
 
 
 @admin.register(Shelfie)

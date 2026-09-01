@@ -217,6 +217,36 @@
             flex-shrink: 0;
         }
 
+        /* Second legend section. Shape and colour are independent, so the
+           shape swatches are drawn in neutral ink rather than in any of the
+           three freshness colours, which would imply a freshness. */
+        .map-legend-title + .legend-item {
+            margin-top: 0;
+        }
+
+        .legend-section-gap {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--color-neutral-200);
+        }
+
+        .legend-glyph {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-neutral-800);
+        }
+
+        .legend-glyph svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+            display: block;
+        }
+
         /* =================================================================
            CUSTOM MAP MARKERS
            ================================================================= */
@@ -227,8 +257,13 @@
         }
 
         .marker-pin {
-            width: 40px;
-            height: 40px;
+            /* Size comes from --pin-size, set inline from the PIN_SIZE
+               constant in JS, which is authoritative. The literal below is
+               a defensive fallback for markup that fails to set the
+               property; no real marker path uses it. Keep it in step with
+               PIN_SIZE so a reader is not misled by a stale number. */
+            width: var(--pin-size, 36px);
+            height: var(--pin-size, 36px);
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
@@ -236,7 +271,20 @@
             justify-content: center;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
             border: 3px solid white;
+            /* The glyph is a white knockout: it takes currentColor from
+               here and introduces no colour of its own. */
+            color: white;
             transition: transform var(--transition-fast);
+        }
+
+        .pin-glyph {
+            width: 55%;
+            height: 55%;
+            /* Counter-rotate against the pin's -45deg, as .marker-pin i did. */
+            transform: rotate(45deg);
+            fill: currentColor;
+            display: block;
+            pointer-events: none;
         }
 
         .marker-pin:hover {
@@ -678,6 +726,9 @@
     </style>
 </head>
 <body>
+    {# Pin glyph sprite. Once per page: duplicate ids if included twice. #}
+    {% include "libraries/_pin_sprite.html" %}
+
     <!-- Header -->
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid px-3 px-md-4">
@@ -718,20 +769,42 @@
             </button>
         </div>
 
-        <!-- Legend -->
+        <!-- Legend. Two independent encodings: colour is freshness,
+             shape is the kind of stop. Both need teaching. -->
         <div class="map-legend">
-            <div class="map-legend-title">Library Freshness</div>
+            <div class="map-legend-title">Colour: freshness</div>
             <div class="legend-item">
                 <span class="legend-dot" style="background: var(--color-fresh);"></span>
-                <span>Fresh — under 7 days</span>
+                <span>Fresh - under 7 days</span>
             </div>
             <div class="legend-item">
                 <span class="legend-dot" style="background: var(--color-stale);"></span>
-                <span>Stale — 7 to 21 days</span>
+                <span>Stale - 7 to 21 days</span>
             </div>
             <div class="legend-item">
                 <span class="legend-dot" style="background: var(--color-needs-visit);"></span>
-                <span>Needs visit — over 21 days</span>
+                <span>Needs visit - over 21 days</span>
+            </div>
+            <div class="map-legend-title legend-section-gap">Shape: kind of stop</div>
+            <div class="legend-item">
+                <span class="legend-glyph"><svg><use href="#pin-glyph-worm"/></svg></span>
+                <span>Standard library</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-glyph"><svg><use href="#pin-glyph-web"/></svg></span>
+                <span>Yarn library</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-glyph"><svg><use href="#pin-glyph-butterfly"/></svg></span>
+                <span>Art library</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-glyph"><svg><use href="#pin-glyph-beehive"/></svg></span>
+                <span>Community fridge</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-glyph"><svg><use href="#pin-glyph-dragonfly"/></svg></span>
+                <span>Other</span>
             </div>
         </div>
 
@@ -908,16 +981,96 @@
         // =================================================================
         // Custom Marker Icon Factory
         // =================================================================
-        function createMarkerIcon(color) {
-            return L.divIcon({
-                className: 'custom-marker',
-                html: `<div class="marker-pin" style="background: ${color};">
-                         <i class="bi bi-book-half"></i>
-                       </div>`,
-                iconSize: [40, 40],
-                iconAnchor: [20, 40],
-                popupAnchor: [0, -40]
+        // Two orthogonal encodings ride on one pin:
+        //   colour = freshness (unchanged, see CONFIG.colors)
+        //   shape  = stop type (new, see STOP_TYPE_GLYPHS)
+
+        // Pin size in px. Single source of truth: it drives the CSS custom
+        // property, the Leaflet iconSize and both anchors. Raise it to 36
+        // here and nowhere else.
+        const PIN_SIZE = 36;
+
+        // stop_type -> sprite symbol id in _pin_sprite.html. A stop_type
+        // added to the model needs an entry here and a <symbol> there, or
+        // it falls back to the "other" glyph.
+        const STOP_TYPE_GLYPHS = {
+            standard: 'worm',
+            yarn: 'web',
+            art: 'butterfly',
+            fridge: 'beehive',
+            other: 'dragonfly'
+        };
+        const FALLBACK_STOP_TYPE = 'other';
+
+        const STOP_TYPE_LABELS = {
+            standard: 'Standard library',
+            yarn: 'Yarn library',
+            art: 'Art library',
+            fridge: 'Community fridge',
+            other: 'Other stop'
+        };
+        const FRESHNESS_LABELS = {
+            fresh: 'recently checked',
+            stale: 'checked a while ago',
+            needs_visit: 'needs a visit'
+        };
+
+        // Unknown, null or unrecognised values render as "other" rather
+        // than as an empty pin.
+        function normaliseStopType(stopType) {
+            return Object.prototype.hasOwnProperty.call(STOP_TYPE_GLYPHS, stopType)
+                ? stopType
+                : FALLBACK_STOP_TYPE;
+        }
+
+        function normaliseFreshness(freshness) {
+            return Object.prototype.hasOwnProperty.call(FRESHNESS_LABELS, freshness)
+                ? freshness
+                : 'needs_visit';
+        }
+
+        // "Yarn library, recently checked"
+        function markerAltText(stopType, freshness) {
+            return STOP_TYPE_LABELS[normaliseStopType(stopType)] + ', ' +
+                   FRESHNESS_LABELS[normaliseFreshness(freshness)];
+        }
+
+        // Built once at module load: one divIcon per (stop_type, freshness)
+        // pair, 15 in all. divIcon copies its html string into the DOM once
+        // per marker, so the string is built here and shared rather than
+        // rebuilt per marker. The glyph is a <use> reference of roughly 60
+        // bytes into the sprite; inlining the path data instead would put
+        // megabytes of duplicated geometry in the page.
+        const MARKER_ICONS = (function buildMarkerIcons() {
+            const cache = {};
+            Object.keys(STOP_TYPE_GLYPHS).forEach(function (stopType) {
+                Object.keys(FRESHNESS_LABELS).forEach(function (freshness) {
+                    // Both values are from our own closed vocabularies above,
+                    // never from the payload, so this needs no escaping.
+                    const html =
+                        '<div class="marker-pin" role="img" aria-label="' +
+                        markerAltText(stopType, freshness) + '"' +
+                        ' style="--pin-size:' + PIN_SIZE + 'px;background:' +
+                        CONFIG.colors[freshness] + ';">' +
+                        '<svg class="pin-glyph"><use href="#pin-glyph-' +
+                        STOP_TYPE_GLYPHS[stopType] + '"/></svg>' +
+                        '</div>';
+                    cache[stopType + '|' + freshness] = L.divIcon({
+                        className: 'custom-marker',
+                        html: html,
+                        iconSize: [PIN_SIZE, PIN_SIZE],
+                        iconAnchor: [PIN_SIZE / 2, PIN_SIZE],
+                        popupAnchor: [0, -PIN_SIZE]
+                    });
+                });
             });
+            return cache;
+        })();
+
+        function createMarkerIcon(stopType, freshness) {
+            return MARKER_ICONS[
+                normaliseStopType(stopType) + '|' + normaliseFreshness(freshness)
+            ];
         }
 
         // =================================================================
@@ -978,12 +1131,12 @@
                 }
 
                 // A newer load started while this one was awaiting the
-                // network — drop this response; the newer one will apply.
+                // network - drop this response; the newer one will apply.
                 if (epoch !== loadEpoch) return;
 
                 // A popup may have opened while the request was in flight.
                 // clearLayers() would remove the marker it's anchored to,
-                // forcing the popup shut — re-check the guard here, at the
+                // forcing the popup shut - re-check the guard here, at the
                 // moment that matters, and defer the refresh instead.
                 if (map._popup && map._popup.isOpen()) {
                     map.once('popupclose', debouncedLoadLibraries);
@@ -1002,7 +1155,8 @@
                     }
 
                     const marker = L.marker([coords[1], coords[0]], {
-                        icon: createMarkerIcon(props.color)
+                        icon: createMarkerIcon(props.stop_type, props.freshness),
+                        alt: markerAltText(props.stop_type, props.freshness)
                     });
 
                     // Build popup content
@@ -1257,12 +1411,12 @@
         //   2. Show a success toast + refresh markers after a successful POST.
         // =================================================================
         document.body.addEventListener('htmx:afterSwap', function(event) {
-            // Submit form just landed in the offcanvas — wire up the picker.
+            // Submit form just landed in the offcanvas - wire up the picker.
             if (event.detail.target.id === 'submit-form-container') {
                 setTimeout(initLocationPicker, 100);
             }
 
-            // Successful submission — toast it and refresh markers. Do NOT
+            // Successful submission - toast it and refresh markers. Do NOT
             // auto-close the offcanvas; the user reads the success card at
             // their own pace, and the toast already provides feedback.
             const successEl = event.detail.target.querySelector('.submission-success');
@@ -1350,7 +1504,9 @@
                 submitLocationMarker.setLatLng([lat, lng]);
             } else {
                 submitLocationMarker = L.marker([lat, lng], {
-                    icon: createMarkerIcon(CONFIG.colors.fresh)
+                    // A pin being placed is a brand new standard library.
+                    icon: createMarkerIcon('standard', 'fresh'),
+                    alt: markerAltText('standard', 'fresh')
                 }).addTo(submitLocationPicker);
             }
 

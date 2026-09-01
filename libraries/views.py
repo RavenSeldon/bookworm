@@ -199,6 +199,8 @@ def libraries_geojson(request):
                 'name': library.name or f'Library #{library.pk}',
                 'description': library.description,
                 'freshness': freshness,
+                # Shape encoding. Orthogonal to color, which stays freshness.
+                'stop_type': library.stop_type or '',
                 'color': color,
                 'last_updated': library.last_updated.isoformat(),
                 'shelfie_count': library.shelfie_count,

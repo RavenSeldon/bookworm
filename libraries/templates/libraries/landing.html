@@ -45,7 +45,7 @@
            ================================================================= */
 
         /* =================================================================
-           HERO — full-width background image with text overlay
+           HERO - full-width background image with text overlay
            ================================================================= */
         .hero {
             min-height: 100vh;
@@ -89,7 +89,7 @@
             );
         }
 
-        /* Text panel — sits at the bottom of the hero */
+        /* Text panel - sits at the bottom of the hero */
         .hero-text-panel {
             position: relative;
             z-index: 1;
@@ -356,7 +356,7 @@
         }
 
         /* =================================================================
-           TEMPORARY EVENT CTA — remove after Library Walk event
+           TEMPORARY EVENT CTA - remove after Library Walk event
            ================================================================= */
 
         .hero-cta-stack {
@@ -459,9 +459,30 @@
             line-height: 1.55;
         }
 
+        /* Icon attribution. Required by CC BY 3.0, kept deliberately quiet:
+           smaller and lighter than the footer links above it. */
+        .landing-footer-credits {
+            max-width: 560px;
+            margin: 1.25rem auto 0;
+            padding-top: 0.9rem;
+            border-top: 1px solid var(--color-neutral-200);
+        }
+
+        .landing-footer-credits p {
+            font-size: 0.72rem;
+            line-height: 1.5;
+            color: var(--color-neutral-400);
+            margin: 0.15rem 0;
+        }
+
+        .landing-footer-credits a {
+            color: var(--color-neutral-500);
+            font-weight: 400;
+        }
+
 
         /* =================================================================
-           DESKTOP — side-by-side hero
+           DESKTOP - side-by-side hero
            ================================================================= */
         @media (min-width: 768px) {
             .hero-text-panel {
@@ -636,6 +657,20 @@
             <a href="https://www.straight.com/city-culture/map-here-are-all-neighbourhood-book-exchanges-in-vancouver" target="_blank" rel="noopener">
                 Georgia Straight Library Map
             </a>
+        </div>
+        <div class="landing-footer-credits">
+            <p>
+                Map pin worm by
+                <a href="https://thenounproject.com/browse/icons/term/worm/" target="_blank" rel="noopener">Alejandro Capellan</a>
+                from Noun Project, licensed
+                <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>.
+            </p>
+            <p>
+                Icons made by Lorc and Delapouite. Available on
+                <a href="https://game-icons.net" target="_blank" rel="noopener">https://game-icons.net</a>,
+                licensed
+                <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>.
+            </p>
         </div>
     </footer>
 
