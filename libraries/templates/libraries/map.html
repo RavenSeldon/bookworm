@@ -192,6 +192,64 @@
             border: 1px solid var(--color-neutral-200);
         }
 
+        /* Collapsible legend. The <details> element carries the panel
+           chrome; the summary is the always-visible bar. */
+        .map-legend-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            cursor: pointer;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-neutral-500);
+            /* Remove the default disclosure triangle. The two rules
+               disagree across engines, so both are needed. */
+            list-style: none;
+            user-select: none;
+        }
+
+        .map-legend-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        /* Never remove the focus ring without replacing it: the summary is
+           the only keyboard control in this panel. */
+        .map-legend-summary:focus-visible {
+            outline: 2px solid var(--color-primary-500);
+            outline-offset: 3px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Shown only when the legend is collapsed on phones, where it
+           becomes an icon button. Hidden everywhere else. */
+        .legend-fab-icon {
+            display: none;
+            font-size: 1.05rem;
+            line-height: 1;
+            color: var(--color-neutral-600);
+        }
+
+        .legend-chevron {
+            font-size: 0.9rem;
+            line-height: 1;
+            color: var(--color-neutral-400);
+            transition: transform var(--transition-fast);
+        }
+
+        .map-legend[open] .legend-chevron {
+            transform: rotate(180deg);
+        }
+
+        .map-legend[open] .map-legend-summary {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--color-neutral-200);
+        }
+
         .map-legend-title {
             font-family: var(--font-display);
             font-weight: 600;
@@ -200,6 +258,10 @@
             letter-spacing: 0.05em;
             color: var(--color-neutral-500);
             margin-bottom: 10px;
+        }
+
+        .map-legend-body > .map-legend-title:first-child {
+            margin-top: 0;
         }
 
         .legend-item {
@@ -558,8 +620,76 @@
         }
 
         @media (max-width: 576px) {
+            /* Previously display:none, so phones got no legend at all. Now
+               that shape carries meaning as well as colour, they need one.
+               It opens collapsed (see the state script) and is capped so an
+               expanded panel can never swallow the whole map. */
             .map-legend {
+                /* Centre-aligned with the Add Library button, which is the
+                   bottom item of the .map-controls column: that button sits
+                   at bottom 100px and is 48px tall, so its centre is at
+                   124px. The collapsed legend is 42px, so 124 - 21 = 103.
+                   Matching bottom edges instead would leave the two centres
+                   3px apart, which reads as a mistake at this size. */
+                bottom: 103px;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                max-width: 260px;
+                padding: 10px 14px;
+                font-size: 0.75rem;
+            }
+
+            .map-legend-body {
+                max-height: 40vh;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            /* Collapsed on a phone, the legend is an icon button rather than
+               a labelled bar: a full-width bar costs too much of a small map.
+               42px, deliberately a little smaller than the 48px map controls,
+               so it reads as a secondary member of the same control family.
+               The key icon is distinct from the crosshair and plus beside it,
+               and a map legend is literally a map key. */
+            .map-legend:not([open]) {
+                right: auto;
+                width: 42px;
+                height: 42px;
+                max-width: none;
+                padding: 0;
+                border-radius: var(--radius-lg);
+            }
+
+            .map-legend:not([open]) .map-legend-summary {
+                width: 100%;
+                height: 100%;
+                justify-content: center;
+                gap: 0;
+            }
+
+            .map-legend:not([open]) .legend-fab-icon {
+                display: block;
+            }
+
+            /* The chevron is redundant once the control is an icon. */
+            .map-legend:not([open]) .legend-chevron {
                 display: none;
+            }
+
+            /* The label is hidden visually but NOT removed from the
+               accessibility tree: display:none here would leave the control
+               with no accessible name at all. */
+            .map-legend:not([open]) .legend-summary-text {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip-path: inset(50%);
+                white-space: nowrap;
+                border: 0;
             }
 
             .leaflet-popup-content {
@@ -758,7 +888,7 @@
                     id="btn-locate"
                     title="Find my location"
                     aria-label="Find my location">
-                <i class="bi bi-crosshairs"></i>
+                <i class="bi bi-crosshair"></i>
             </button>
             <button class="btn map-control-btn btn-light"
                     data-bs-toggle="offcanvas"
@@ -770,43 +900,93 @@
         </div>
 
         <!-- Legend. Two independent encodings: colour is freshness,
-             shape is the kind of stop. Both need teaching. -->
-        <div class="map-legend">
-            <div class="map-legend-title">Colour: freshness</div>
-            <div class="legend-item">
-                <span class="legend-dot" style="background: var(--color-fresh);"></span>
-                <span>Fresh - under 7 days</span>
+             shape is the kind of stop. Both need teaching.
+             A native <details> so collapsing works with no JS at all: the
+             summary is focusable and announces its own expanded state, so
+             there is no aria-expanded to hand-manage. The script below only
+             remembers the choice; it is not required for the control to
+             work. -->
+        <details class="map-legend" id="map-legend" open>
+            <summary class="map-legend-summary">
+                <span class="legend-summary-text">Legend</span>
+                <i class="bi bi-key-fill legend-fab-icon" aria-hidden="true"></i>
+                <i class="bi bi-chevron-down legend-chevron" aria-hidden="true"></i>
+            </summary>
+            <div class="map-legend-body">
+                <div class="map-legend-title">Colour: freshness</div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: var(--color-fresh);"></span>
+                    <span>Fresh - under 7 days</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: var(--color-stale);"></span>
+                    <span>Stale - 7 to 21 days</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot" style="background: var(--color-needs-visit);"></span>
+                    <span>Needs visit - over 21 days</span>
+                </div>
+                <div class="map-legend-title legend-section-gap">Shape: kind of stop</div>
+                <div class="legend-item">
+                    <span class="legend-glyph"><svg><use href="#pin-glyph-worm"/></svg></span>
+                    <span>Standard library</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-glyph"><svg><use href="#pin-glyph-web"/></svg></span>
+                    <span>Yarn library</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-glyph"><svg><use href="#pin-glyph-butterfly"/></svg></span>
+                    <span>Art library</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-glyph"><svg><use href="#pin-glyph-beehive"/></svg></span>
+                    <span>Community fridge</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-glyph"><svg><use href="#pin-glyph-dragonfly"/></svg></span>
+                    <span>Other</span>
+                </div>
             </div>
-            <div class="legend-item">
-                <span class="legend-dot" style="background: var(--color-stale);"></span>
-                <span>Stale - 7 to 21 days</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-dot" style="background: var(--color-needs-visit);"></span>
-                <span>Needs visit - over 21 days</span>
-            </div>
-            <div class="map-legend-title legend-section-gap">Shape: kind of stop</div>
-            <div class="legend-item">
-                <span class="legend-glyph"><svg><use href="#pin-glyph-worm"/></svg></span>
-                <span>Standard library</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-glyph"><svg><use href="#pin-glyph-web"/></svg></span>
-                <span>Yarn library</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-glyph"><svg><use href="#pin-glyph-butterfly"/></svg></span>
-                <span>Art library</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-glyph"><svg><use href="#pin-glyph-beehive"/></svg></span>
-                <span>Community fridge</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-glyph"><svg><use href="#pin-glyph-dragonfly"/></svg></span>
-                <span>Other</span>
-            </div>
-        </div>
+        </details>
+        <script>
+            // Runs inline, immediately after the element, so the resolved
+            // state paints with the page instead of flashing open first.
+            // Stored choice always wins. With no stored choice the legend
+            // starts open on tablet and desktop, where it teaches the two
+            // encodings, and closed on phones, where an open panel would
+            // cover most of the map. Storage access itself throws in some
+            // privacy modes, so every touch of it is guarded; if it fails
+            // the defaults simply apply and the control still works.
+            (function () {
+                var KEY = 'bookworm.legendOpen';
+                var el = document.getElementById('map-legend');
+                if (!el) return;
+
+                var stored = null;
+                try {
+                    stored = window.localStorage.getItem(KEY);
+                } catch (e) {
+                    stored = null;
+                }
+
+                if (stored === '1') {
+                    el.open = true;
+                } else if (stored === '0') {
+                    el.open = false;
+                } else {
+                    el.open = window.matchMedia('(min-width: 576px)').matches;
+                }
+
+                el.addEventListener('toggle', function () {
+                    try {
+                        window.localStorage.setItem(KEY, el.open ? '1' : '0');
+                    } catch (e) {
+                        // Persistence is a convenience, never load-bearing.
+                    }
+                });
+            })();
+        </script>
 
         <!-- Empty State Overlay -->
         <div class="map-empty-state hidden" id="map-empty-state">
@@ -820,7 +1000,7 @@
                     <i class="bi bi-arrows-angle-expand me-1"></i>Zoom Out
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" onclick="getUserLocation()">
-                    <i class="bi bi-crosshairs me-1"></i>Use My Location
+                    <i class="bi bi-crosshair me-1"></i>Use My Location
                 </button>
                 <button class="btn btn-primary btn-sm"
                         data-bs-toggle="offcanvas"
@@ -1470,14 +1650,14 @@
                                 setSubmitLocation(position.coords.latitude, position.coords.longitude);
                                 submitLocationPicker.setView([position.coords.latitude, position.coords.longitude], 17);
                                 this.disabled = false;
-                                this.innerHTML = '<i class="bi bi-crosshairs me-2"></i>Use My Location';
+                                this.innerHTML = '<i class="bi bi-crosshair me-2"></i>Use My Location';
                             },
                             (error) => {
                                 // Guard: Check if picker still exists
                                 if (!submitLocationPicker) return;
                                 showToast('Could not get your location', 'warning');
                                 this.disabled = false;
-                                this.innerHTML = '<i class="bi bi-crosshairs me-2"></i>Use My Location';
+                                this.innerHTML = '<i class="bi bi-crosshair me-2"></i>Use My Location';
                             },
                             { enableHighAccuracy: true, timeout: 10000 }
                         );
