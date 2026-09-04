@@ -12,6 +12,7 @@
     <meta property="og:description" content="Discover Little Free Libraries near you. Share books with your community.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
+    <meta property="og:image:secure_url" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
     <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}/">
 
     <title>{{ page_title }}</title>

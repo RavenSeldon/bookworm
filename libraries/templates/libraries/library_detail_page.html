@@ -17,12 +17,18 @@
     <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ library.get_absolute_url }}">
     <meta property="og:site_name" content="Bookworm: Little Library Finder">
     {% if library.latest_shelfie and library.latest_shelfie.photo %}
+    {% comment %}
+        og:image:secure_url is the field Facebook/Instagram treat as canonical
+        for https pages; preview thumbnails are unreliable without it.
+    {% endcomment %}
     <meta property="og:image" content="{{ library.latest_shelfie.photo.url|cloudinary_og_image }}">
+    <meta property="og:image:secure_url" content="{{ library.latest_shelfie.photo.url|cloudinary_og_image }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Latest shelfie for {{ library.name|default:'this Little Free Library' }}">
     {% else %}
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
+    <meta property="og:image:secure_url" content="{{ request.scheme }}://{{ request.get_host }}{% static 'libraries/images/og-default.jpg' %}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Bookworm: Little Library Finder">

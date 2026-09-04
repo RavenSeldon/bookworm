@@ -61,8 +61,12 @@ class SecurityHeadersMiddleware:
         - APIs: Nominatim geocoding
         """
 
-        # Get Cloudinary cloud name from settings if available
-        cloudinary_domain = '*.cloudinary.com'
+        # Cloudinary delivery host. Pinned to the exact host and scheme rather
+        # than a '*.cloudinary.com' wildcard: it is narrower, and it makes the
+        # required scheme explicit. (A schemeless source matches https only on
+        # an https page, which is the second reason the old http:// shelfie
+        # URLs were blocked in in-app browsers.)
+        cloudinary_domain = 'https://res.cloudinary.com'
 
         directives = {
             # Default fallback
@@ -124,5 +128,17 @@ class SecurityHeadersMiddleware:
         csp_parts = []
         for directive, sources in directives.items():
             csp_parts.append(f"{directive} {' '.join(sources)}")
+
+        # Valueless directive, appended separately: it takes no source list, so
+        # putting it in the dict above would emit a stray trailing space.
+        #
+        # Rewrites http:// subresource requests to https:// *before* the
+        # mixed-content check runs. Unlike Chrome's automatic upgrade, this is
+        # honoured by WebKit and Android WebView, so it protects the in-app
+        # browsers (Instagram, Facebook) that otherwise block mixed content
+        # outright and silently. Defence in depth behind cloudinary's
+        # secure=True: it also covers anything Django does not generate --
+        # embeds, third-party assets, hand-written URLs, old pasted links.
+        csp_parts.append('upgrade-insecure-requests')
 
         return '; '.join(csp_parts)

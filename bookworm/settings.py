@@ -240,15 +240,32 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Cloudinary configuration
-# django-cloudinary-storage reads CLOUDINARY_URL automatically when
-# CLOUDINARY_STORAGE values are empty. We explicitly configure cloudinary
-# from the URL to ensure both the base library and django-cloudinary-storage
-# are properly initialized.
+#
+# The SDK parses CLOUDINARY_URL from the environment at import time and sets
+# cloud_name / api_key / api_secret / private_cdn from it. The one thing it
+# does NOT take from that URL is `secure`, which stays None and makes
+# CloudinaryField.url emit http:// delivery URLs.
+#
+# On an https page those are passive mixed content. Chrome auto-upgrades them,
+# which is why this went unnoticed for so long; in-app browsers do not.
+# Instagram's WebView (Android, where MIXED_CONTENT_NEVER_ALLOW is the default
+# for apps targeting API 21+) and WKWebView (iOS) both block them outright, so
+# every shelfie rendered blank when the site was opened from Instagram. Our own
+# CSP img-src is a second gate on the same failure: a schemeless host-source
+# matches https only on an https page.
+#
+# Note that passing cloudinary_url= to cloudinary.config() does NOT do this.
+# config() only assigns its keywords onto the config object, so that call just
+# stored an unread attribute literally named `cloudinary_url` and left `secure`
+# unset -- it looked like configuration while doing nothing.
+#
+# Shelfie.photo is a CloudinaryField (raw SDK), so it bypasses Django's storage
+# layer entirely and never picks up the secure=True default that
+# django-cloudinary-storage's app_settings would otherwise apply.
 import cloudinary
 
 CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')
-if CLOUDINARY_URL:
-    cloudinary.config(cloudinary_url=CLOUDINARY_URL)
+cloudinary.config(secure=True)
 
 
 # =============================================================================
