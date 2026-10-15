@@ -53,7 +53,7 @@ class StaticSitemap(Sitemap):
     protocol = 'https'
 
     def items(self):
-        return ['/', '/map/']
+        return ['/', '/map/', '/support/']
 
     def location(self, item):
         return item

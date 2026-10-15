@@ -35,6 +35,9 @@ python-json-logger>=2.0
 # Railway DATABASE_URL support
 dj-database-url>=2.1
 
+# QR code for the Bitcoin donation address (pure Python, no dependencies)
+segno>=1.6
+
 # =============================================================================
 # Development / Testing (optional)
 # =============================================================================

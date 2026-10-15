@@ -19,3 +19,17 @@ def map_settings(request):
         'TILE_SUBDOMAINS': settings.TILE_SUBDOMAINS,
         'TILE_MAX_ZOOM': settings.TILE_MAX_ZOOM,
     }
+
+
+def donation_settings(request):
+    """
+    Expose the donation links to every template, for the footers and the map
+    navbar. BITCOIN_ADDRESS is '' unless libraries.donations has verified it,
+    so templates can simply test it: an unproven address is never rendered.
+    """
+    from .donations import bitcoin_address
+
+    return {
+        'KOFI_URL': getattr(settings, 'KOFI_URL', ''),
+        'BITCOIN_ADDRESS': bitcoin_address(),
+    }

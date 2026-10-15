@@ -898,8 +898,9 @@ h1, h2, h3, h4, h5, h6 {
         width: auto;
     }
 
-    /* Position action buttons (Add Library / Explore Map) to the right */
-    .btn-add-library,
+    /* Position the navbar's right-hand item (map: support links;
+       detail page: Explore Map) to the right of the centred brand */
+    .nav-support,
     .btn-explore-map {
         position: absolute;
         right: 12px;

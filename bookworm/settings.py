@@ -113,6 +113,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'libraries.context_processors.map_settings',
+                'libraries.context_processors.donation_settings',
             ],
         },
     },
@@ -230,6 +231,43 @@ TILE_ATTRIBUTION = (
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> '
     'contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 )
+
+
+# =============================================================================
+# DONATIONS
+# =============================================================================
+# The only promotion on Bookworm is a request to support Bookworm itself.
+# Links only: no Ko-fi widget, iframe, or third-party script, so the CSP does
+# not change. See the project note "donations-plan".
+#
+# These are hardcoded on purpose -- never env vars, DB rows, or admin fields.
+# Payment details change only through a commit Ben makes, and every change is
+# visible in git history.
+#
+# The Bitcoin option is shown only if libraries.donations can prove the
+# address: valid mainnet bc1q checksum, named in BITCOIN_SIGNED_MESSAGE, and
+# BITCOIN_SIGNATURE verifying for it (BIP137). Anything else hides it.
+#
+# ADDRESS-CHANGE PROCEDURE: sign a new message with the new address in Sparrow
+# (BIP137, single line), replace all three Bitcoin constants together, run the
+# tests, commit, push. Changing the address alone hides the Bitcoin option.
+# =============================================================================
+
+KOFI_URL = 'https://ko-fi.com/bookwormyvr'
+
+# Sparrow wallet "Bookworm-Ganesha", receive index 0 (native SegWit).
+BITCOIN_ADDRESS = 'bc1qvj8qt5h5gnvfm4s2ypcqa0fy9vrsstyzx3zjl5'
+BITCOIN_SIGNED_MESSAGE = (
+    'Bookworm (bookworm.guide) accepts Bitcoin donations at '
+    'bc1qvj8qt5h5gnvfm4s2ypcqa0fy9vrsstyzx3zjl5. '
+    'This address is controlled by Ben Amuwo. '
+    'Official links: bookworm.guide, ko-fi.com/bookwormyvr, '
+    'instagram.com/bookworm_guide. 2026-10-15'
+)
+BITCOIN_SIGNATURE = (
+    'KC1XKiJ18y114PfXqN96x1rtsuQnu8b496fA5H9z8DXaGdVdkeyY6+fSVMLjaS3fxfBp4XqNzj3jUy694E+Fh1c='
+)
+BITCOIN_SIGNATURE_FORMAT = 'BIP137'
 
 
 # =============================================================================

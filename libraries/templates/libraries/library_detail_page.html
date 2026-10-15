@@ -105,6 +105,29 @@
             padding: 1.5rem 1rem 3rem;
         }
 
+        .detail-support {
+            margin: 1.5rem 0 0;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--color-neutral-500);
+        }
+        .detail-support a {
+            color: var(--color-primary-700);
+            text-decoration: none;
+            margin-left: 0.35rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .detail-support a:hover { text-decoration: underline; }
+        .detail-support a.detail-support-btc {
+            min-width: 28px;
+            min-height: 28px;
+            justify-content: center;
+            opacity: 0.75;
+        }
+        .detail-support a.detail-support-btc:hover { opacity: 1; }
+
         .back-link {
             color: var(--color-primary-700);
             text-decoration: none;
@@ -192,6 +215,14 @@
                 {% include 'libraries/partials/library_detail.html' %}
             </div>
         </div>
+
+        {% if KOFI_URL or BITCOIN_ADDRESS %}
+        <p class="detail-support">
+            Bookworm is free and community-run.
+            {% if KOFI_URL %}<a href="{{ KOFI_URL }}" target="_blank" rel="noopener" aria-label="Support Bookworm on Ko-fi (opens in a new tab)"><i class="bi bi-cup-hot" aria-hidden="true"></i> Support it</a>{% endif %}
+            {% if BITCOIN_ADDRESS %}<a href="{% url 'libraries:support' %}#bitcoin" class="detail-support-btc" aria-label="Donate with Bitcoin" title="Donate with Bitcoin"><i class="bi bi-currency-bitcoin" aria-hidden="true"></i></a>{% endif %}
+        </p>
+        {% endif %}
     </div>
 
     <!-- Toast Container -->

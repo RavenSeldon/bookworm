@@ -1211,6 +1211,40 @@ def here_log(request):
     return HttpResponse("")
 
 # =============================================================================
+# Support / donations
+# =============================================================================
+
+@require_GET
+def support(request):
+    """
+    GET /support/ -- the one place Bookworm asks for money.
+
+    The Ko-fi link and the verified Bitcoin address come from the
+    donation_settings context processor; this view only adds what the
+    Bitcoin section needs (grouped address and QR), and only when the
+    address has been verified.
+    """
+    from django.utils.safestring import mark_safe
+    from .donations import address_groups, bitcoin_address, bitcoin_qr_svg
+
+    address = bitcoin_address()
+    context = {"page_title": "Support Bookworm"}
+    if address:
+        context.update({
+            "btc_groups": address_groups(address),
+            # segno output, generated from an address that has already
+            # passed bech32 validation, so its only variable content is
+            # [a-z0-9]. Safe to mark as such.
+            "btc_qr_svg": mark_safe(bitcoin_qr_svg(address)),
+            "btc_uri": f"bitcoin:{address}",
+            "btc_message": settings.BITCOIN_SIGNED_MESSAGE,
+            "btc_signature": settings.BITCOIN_SIGNATURE,
+            "btc_signature_format": getattr(settings, "BITCOIN_SIGNATURE_FORMAT", "BIP137"),
+        })
+    return render(request, "libraries/support.html", context)
+
+
+# =============================================================================
 # Sitemap Crawler
 # =============================================================================
 

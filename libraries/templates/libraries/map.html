@@ -41,27 +41,53 @@
            ================================================================= */
 
         /* =================================================================
-           ADD LIBRARY BUTTON (Navbar)
+           SUPPORT LINKS (Navbar)
+           Replaces the old navbar Add Library button, which duplicated the
+           round + map control. Deliberately the quietest thing in the bar:
+           no fill or border at rest, muted white text, full white only on
+           hover or focus.
            ================================================================= */
-        .btn-add-library {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 1.5px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 16px;
-            border-radius: var(--radius-full);
-            border: none;
-            font-size: 0.875rem;
-            transition: all var(--transition-fast);
+        .nav-support {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 2px;
         }
 
-        .btn-add-library:hover {
-            background: rgba(255, 255, 255, 0.25);
+        .nav-support-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-width: 36px;
+            min-height: 36px;
+            padding: 6px 12px;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            text-decoration: none;
+            border-radius: var(--radius-full);
+            transition: background-color var(--transition-fast), color var(--transition-fast);
+        }
+
+        .nav-support-link .bi {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .nav-support-link:hover,
+        .nav-support-link:focus-visible {
             color: white;
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-md);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .nav-support-link:focus-visible {
+            outline: 2px solid rgba(255, 255, 255, 0.85);
+            outline-offset: 2px;
+        }
+
+        .nav-support-btc {
+            padding: 6px;
         }
 
         /* =================================================================
@@ -589,12 +615,14 @@
            MAP-SPECIFIC RESPONSIVE ADJUSTMENTS
            ================================================================= */
         @media (max-width: 768px) {
-            .btn-add-library span {
+            /* Icons only on phones and small tablets; the accessible
+               name comes from aria-label, not the hidden text. */
+            .nav-support-link span {
                 display: none;
             }
 
-            .btn-add-library {
-                padding: 8px 12px;
+            .nav-support-link {
+                padding: 6px;
             }
 
             .map-legend {
@@ -868,13 +896,25 @@
                      height="36">
                 <span>Bookworm</span>
             </a>
-            <button class="btn-add-library"
-                    data-bs-toggle="offcanvas"
-                    data-bs-target="#submitOffcanvas"
-                    aria-label="Add a library">
-                <i class="bi bi-plus"></i>
-                <span>Add Library</span>
-            </button>
+            {% if KOFI_URL or BITCOIN_ADDRESS %}
+            <!-- The only ask on Bookworm. Quiet by design: no fill, muted
+                 text, and it never sits on the map surface itself. Adding a
+                 library stays on the round + control and the empty state. -->
+            <div class="nav-support">
+                {% if KOFI_URL %}
+                <a class="nav-support-link" href="{{ KOFI_URL }}" target="_blank" rel="noopener"
+                   aria-label="Support Bookworm on Ko-fi (opens in a new tab)" title="Support Bookworm">
+                    <i class="bi bi-cup-hot" aria-hidden="true"></i><span>Support</span>
+                </a>
+                {% endif %}
+                {% if BITCOIN_ADDRESS %}
+                <a class="nav-support-link nav-support-btc" href="{% url 'libraries:support' %}#bitcoin"
+                   aria-label="Donate with Bitcoin" title="Donate with Bitcoin">
+                    <i class="bi bi-currency-bitcoin" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </nav>
 

@@ -68,6 +68,9 @@ urlpatterns = [
     path("library-walk/register/", views.library_walk_register, name="library_walk_register"),
     path("library-walk/thanks/", views.library_walk_thanks, name="library_walk_thanks"),
 
+    # Support / donations
+    path("support/", views.support, name="support"),
+
     # robots.txt
     path("robots.txt", views.robots_txt, name="robots_txt"),
     # Health check

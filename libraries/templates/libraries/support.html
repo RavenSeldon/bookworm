@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Bookworm</title>
+    <meta name="description" content="Bookworm is a free, community-built map of Little Free Libraries across British Columbia. Here is how to help keep it running.">
+    <meta name="theme-color" content="#1a5f4a">
+    <link rel="canonical" href="https://bookworm.guide/support/">
+
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'libraries/css/bookworm.css' %}">
+    <link rel="icon" type="image/x-icon" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="icon" type="image/x-icon" sizes="32x32" href="{% static 'libraries/images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{% static 'libraries/images/bookworm-favicon-512.png' %}">
+
+    <style>
+        body {
+            background: var(--color-neutral-50);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .support-page {
+            flex: 1;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 2rem 1rem 3rem;
+        }
+        .back-link {
+            color: var(--color-primary-700);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 1.25rem;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        .support-page h1 {
+            font-family: var(--font-display);
+            color: var(--color-primary-800);
+            font-size: 2.1rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
+        }
+        .support-page h2 {
+            font-family: var(--font-display);
+            color: var(--color-primary-800);
+            font-size: 1.35rem;
+            font-weight: 500;
+            margin: 0 0 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .support-page p,
+        .support-page li {
+            color: var(--color-neutral-700);
+            line-height: 1.6;
+        }
+        .lede { font-size: 1.05rem; }
+
+        .support-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-neutral-200);
+            padding: 1.5rem 1.5rem 1.6rem;
+            margin-top: 1.25rem;
+        }
+        .support-card p:last-child { margin-bottom: 0; }
+
+        .btn-kofi {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--color-primary-800);
+            color: white;
+            padding: 0.65rem 1.4rem;
+            border-radius: var(--radius-full);
+            text-decoration: none;
+            font-weight: 600;
+            transition: var(--transition-base);
+        }
+        .btn-kofi:hover,
+        .btn-kofi:focus-visible {
+            background: var(--color-primary-900);
+            color: white;
+        }
+        .muted-note {
+            font-size: 0.85rem;
+            color: var(--color-neutral-500) !important;
+            margin-top: 0.75rem;
+        }
+
+        /* ---- Bitcoin ---- */
+        #bitcoin { scroll-margin-top: 1rem; }
+        .btc-layout {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .btc-qr-wrap {
+            flex: 0 0 auto;
+            border: 1px solid var(--color-neutral-200);
+            border-radius: var(--radius-md);
+            padding: 6px;
+            background: white;
+            line-height: 0;
+        }
+        .btc-qr-wrap svg {
+            width: 164px;
+            height: 164px;
+            display: block;
+        }
+        .btc-details { flex: 1 1 240px; min-width: 0; }
+        .btc-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--color-neutral-500);
+            margin-bottom: 0.3rem;
+        }
+        /* The address is grouped in fours for human checking. The groups are
+           separated by CSS margin, not spaces, so selecting and copying the
+           text still yields the exact address. */
+        .btc-address {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 1rem;
+            line-height: 1.7;
+            color: var(--color-neutral-900);
+            background: var(--color-neutral-100);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem 0.65rem;
+            word-break: break-all;
+            user-select: all;
+            -webkit-user-select: all;
+        }
+        .btc-address span { margin-right: 0.45em; }
+        .btc-address span:last-child { margin-right: 0; }
+        .btc-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .btn-quiet {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: white;
+            color: var(--color-primary-800);
+            border: 1px solid var(--color-primary-700);
+            border-radius: var(--radius-full);
+            padding: 0.4rem 0.95rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            min-height: 40px;
+            cursor: pointer;
+        }
+        .btn-quiet:hover { background: var(--color-primary-50); color: var(--color-primary-800); }
+        .btn-quiet:focus-visible,
+        .btn-kofi:focus-visible,
+        .back-link:focus-visible,
+        .verify-block summary:focus-visible {
+            outline: 3px solid var(--color-primary-400);
+            outline-offset: 2px;
+        }
+
+        .verify-block {
+            margin-top: 1.25rem;
+            border-top: 1px solid var(--color-neutral-200);
+            padding-top: 0.9rem;
+        }
+        .verify-block summary {
+            cursor: pointer;
+            color: var(--color-primary-700);
+            font-weight: 500;
+        }
+        .verify-block .mono-block {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.8rem;
+            background: var(--color-neutral-100);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.7rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--color-neutral-800);
+            margin: 0.25rem 0 0.75rem;
+        }
+
+        .honest-notes {
+            font-size: 0.875rem;
+            color: var(--color-neutral-600);
+            margin-top: 1.75rem;
+        }
+        .honest-notes p { color: var(--color-neutral-600); margin-bottom: 0.5rem; }
+
+        .copy-status {
+            position: absolute;
+            width: 1px; height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container-fluid px-3 px-md-4 d-flex align-items-center justify-content-between">
+            <a class="navbar-brand" href="{% url 'libraries:landing' %}">
+                <img src="{% static 'libraries/images/bookworm-nav-logo.png' %}"
+                     alt="Bookworm mascot"
+                     height="36">
+                <span>Bookworm</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="support-page">
+        <a href="{% url 'libraries:map' %}" class="back-link">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            Back to the map
+        </a>
+
+        <h1>Support Bookworm</h1>
+        <p class="lede">
+            Bookworm is a free, community-built map of Little Free Libraries
+            across British Columbia. It has no paywalls and no third-party ads,
+            and it never sells data. It is built and run by one person, Ben.
+        </p>
+        <p>
+            Keeping it online costs about $250 a year for hosting, the database
+            and the domain. Anything beyond that goes toward QR stickers for
+            library stewards, community library walks, and mapping more of BC.
+        </p>
+
+        {% if KOFI_URL %}
+        <section class="support-card" aria-labelledby="kofi-heading">
+            <h2 id="kofi-heading"><i class="bi bi-cup-hot" aria-hidden="true"></i> Buy Bookworm a coffee</h2>
+            <p>One-time or monthly, through Ko-fi.</p>
+            <a class="btn-kofi" href="{{ KOFI_URL }}" target="_blank" rel="noopener">
+                Support on Ko-fi
+                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                <span class="visually-hidden">(opens in a new tab)</span>
+            </a>
+        </section>
+        {% endif %}
+
+        {% if BITCOIN_ADDRESS %}
+        <section class="support-card" id="bitcoin" aria-labelledby="bitcoin-heading">
+            <h2 id="bitcoin-heading"><i class="bi bi-currency-bitcoin" aria-hidden="true"></i> Bitcoin</h2>
+            <div class="btc-layout">
+                <div class="btc-qr-wrap" role="img" aria-label="QR code for the Bitcoin address below">
+                    {{ btc_qr_svg }}
+                </div>
+                <div class="btc-details">
+                    <div class="btc-label" id="btc-address-label">Bitcoin address</div>
+                    <div class="btc-address" id="btc-address">{% for group in btc_groups %}<span>{{ group }}</span>{% endfor %}</div>
+                    <div class="btc-actions">
+                        <button type="button" class="btn-quiet js-copy" data-copy="{{ BITCOIN_ADDRESS }}" hidden>
+                            <i class="bi bi-clipboard" aria-hidden="true"></i> <span class="js-copy-label">Copy address</span>
+                        </button>
+                        <a class="btn-quiet" href="{{ btc_uri }}">
+                            <i class="bi bi-wallet2" aria-hidden="true"></i> Open in wallet
+                        </a>
+                    </div>
+                    <p class="muted-note">
+                        On-chain Bitcoin only. Please don't send any other
+                        currency to this address; it would be lost.
+                        Before sending, check that the first and last six
+                        characters in your wallet match this page.
+                    </p>
+                </div>
+            </div>
+
+            <details class="verify-block">
+                <summary>How to check this address is really Bookworm's</summary>
+                <p class="mt-2">
+                    The message below was signed with the private key for this
+                    address. Any wallet that verifies signed messages, such as
+                    Sparrow or Electrum, can confirm it: enter the address, the
+                    message and the signature exactly as shown.
+                </p>
+                <div class="btc-label">Message</div>
+                <div class="mono-block">{{ btc_message }}</div>
+                <div class="btc-label">Signature ({{ btc_signature_format }})</div>
+                <div class="mono-block">{{ btc_signature }}</div>
+                <p>
+                    If the address on this page ever does not match the signed
+                    message, please don't send anything, and let me know at
+                    <a href="mailto:ben@bookworm.guide">ben@bookworm.guide</a>.
+                </p>
+            </details>
+        </section>
+        {% endif %}
+
+        <section class="support-card" aria-labelledby="other-heading">
+            <h2 id="other-heading"><i class="bi bi-book" aria-hidden="true"></i> Other ways to help</h2>
+            <p>
+                Money is the smallest part of it. <a href="{% url 'libraries:map' %}">Add a library</a>
+                you know, refresh one with a new shelfie photo, or share Bookworm
+                with a neighbour. Updates live on
+                <a href="https://www.instagram.com/bookworm_guide" target="_blank" rel="noopener">Instagram<span class="visually-hidden"> (opens in a new tab)</span></a>.
+            </p>
+        </section>
+
+        <div class="honest-notes">
+            <p>
+                Bookworm is not a registered charity, so donations are not
+                tax-deductible and no receipts can be issued.
+            </p>
+            <p>
+                Donations never buy a listing, a ranking, or any say over what
+                appears on the map.
+            </p>
+        </div>
+
+        <p class="copy-status" role="status" aria-live="polite" id="copy-status"></p>
+    </main>
+
+    <script>
+        // Progressive enhancement: the copy button stays hidden unless the
+        // Clipboard API is available (it is missing on plain http and in some
+        // in-app browsers). Without it, the address is still selectable as
+        // one unit (user-select: all) and the QR and wallet link still work.
+        (function () {
+            if (!navigator.clipboard || !window.isSecureContext) return;
+            var status = document.getElementById('copy-status');
+            document.querySelectorAll('.js-copy').forEach(function (btn) {
+                var label = btn.querySelector('.js-copy-label');
+                var original = label ? label.textContent : '';
+                btn.hidden = false;
+                btn.addEventListener('click', function () {
+                    navigator.clipboard.writeText(btn.getAttribute('data-copy')).then(function () {
+                        if (label) label.textContent = 'Copied';
+                        if (status) status.textContent = 'Address copied to clipboard';
+                        setTimeout(function () {
+                            if (label) label.textContent = original;
+                            if (status) status.textContent = '';
+                        }, 2000);
+                    }, function () {
+                        // Copy refused: select the address so the user can copy it by hand.
+                        var el = document.getElementById('btc-address');
+                        if (el && window.getSelection) {
+                            var range = document.createRange();
+                            range.selectNodeContents(el);
+                            var sel = window.getSelection();
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                        if (status) status.textContent = 'Copy failed. The address is selected; copy it manually.';
+                    });
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -653,6 +653,14 @@
             font-weight: 500;
         }
         .walk-footer-links a:hover { color: var(--color-primary-200); text-decoration: underline; }
+        .walk-footer-links a.footer-btc {
+            justify-content: center;
+            min-width: 32px;
+            min-height: 32px;
+            opacity: 0.75;
+        }
+        .walk-footer-links a.footer-btc:hover,
+        .walk-footer-links a.footer-btc:focus-visible { opacity: 1; }
         .walk-footer-note {
             font-size: 0.82rem;
             color: rgba(255,255,255,0.6);
@@ -923,6 +931,16 @@
             <a href="{% url 'libraries:map' %}"><i class="bi bi-map"></i> The Bookworm map</a>
             <a href="https://www.instagram.com/bookworm_guide" target="_blank" rel="noopener"><i class="bi bi-instagram"></i> bookworm_guide</a>
             <a href="mailto:ben@bookworm.guide"><i class="bi bi-envelope"></i> ben@bookworm.guide</a>
+            {% if KOFI_URL %}
+            <a href="{{ KOFI_URL }}" target="_blank" rel="noopener" aria-label="Support Bookworm on Ko-fi (opens in a new tab)">
+                <i class="bi bi-cup-hot" aria-hidden="true"></i> Support Bookworm
+            </a>
+            {% endif %}
+            {% if BITCOIN_ADDRESS %}
+            <a href="{% url 'libraries:support' %}#bitcoin" class="footer-btc" aria-label="Donate with Bitcoin" title="Donate with Bitcoin">
+                <i class="bi bi-currency-bitcoin" aria-hidden="true"></i>
+            </a>
+            {% endif %}
         </div>
         <p class="walk-footer-note">
             Bookworm: a free, community-built map of Little Free Libraries across British Columbia.
